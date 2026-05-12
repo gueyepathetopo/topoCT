@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TopoCT">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#17160F">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<title>TopoCT</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#F4F3EF;--bg2:#E8E6DF;--bg3:#FFFFFF;
+  --border:#D4D1C8;--border2:#E4E2DB;
+  --text:#17160F;--text2:#6A6860;--text3:#A09E98;
+  --blue:#1A5CA8;--blue-l:#E2EDF8;--blue-d:#0D3B6E;
+  --green:#256B3A;--green-l:#E2F0E8;--green-d:#164428;
+  --amber:#A85C0A;--amber-l:#FBF0E0;
+  --red:#B52A1D;--red-l:#FAEAE8;
+  --purple:#5C44B8;--purple-l:#EDEAFB;
+  --orange:#B55C10;--orange-l:#FBF0E2;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'IBM Plex Sans',sans-serif;
+  --r:12px;--rs:7px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overscroll-behavior:none;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);max-width:430px;margin:0 auto;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+input,select,textarea,button{font-family:var(--sans);outline:none;-webkit-appearance:none;appearance:none;}
+.topbar{background:var(--text);color:#fff;padding:14px 16px 12px;padding-top:calc(14px + env(safe-area-inset-top,0px));display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.tb-brand h1{font-size:18px;font-weight:600;letter-spacing:-.5px;font-family:var(--mono);}
+.tb-brand p{font-size:10px;color:rgba(255,255,255,.4);margin-top:1px;text-transform:uppercase;letter-spacing:.07em;}
+.tb-right{display:flex;align-items:center;gap:8px;}
+.role-pill{font-size:11px;padding:5px 12px;border-radius:99px;font-weight:600;cursor:pointer;border:none;}
+.r-topo{background:var(--blue);color:#fff;}
+.r-admin{background:var(--green);color:#fff;}
+.pending-badge{display:none;font-size:10px;background:var(--amber);color:#fff;padding:2px 8px;border-radius:99px;font-weight:600;}
+.offline-bar{display:none;background:#2D2D2D;color:#fff;font-size:11px;padding:5px 16px;text-align:center;flex-shrink:0;}
+.offline-bar.show{display:block;}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(72px + env(safe-area-inset-bottom,0px));}
+.nav{background:var(--bg3);border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom,0px);flex-shrink:0;}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 8px;font-size:10px;color:var(--text3);cursor:pointer;border:none;background:transparent;}
+.ni.active{color:var(--blue);}
+.ni svg{width:22px;height:22px;}
+.page{display:none;padding:12px;}
+.page.active{display:block;}
+.sec{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin:14px 0 7px;}
+.sec:first-child{margin-top:2px;}
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px;}
+.card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.cbadge{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:500;}
+.cb-topo{background:var(--blue-l);color:var(--blue-d);}
+.cb-pat{background:var(--orange-l);color:var(--orange);}
+.cb-admin{background:var(--green-l);color:var(--green-d);}
+.f{margin-bottom:10px;}
+.f:last-child{margin-bottom:0;}
+.f label{font-size:11px;color:var(--text2);display:block;margin-bottom:4px;font-weight:500;}
+.f input,.f select,.f textarea{width:100%;font-size:14px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rs);background:var(--bg);color:var(--text);}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--blue);background:#fff;}
+.f textarea{height:56px;resize:none;font-size:13px;}
+.f-row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+/* PK BOX */
+.pk-box{border-radius:var(--rs);padding:12px;display:flex;align-items:center;justify-content:space-between;margin:10px 0;}
+.pk-box.ok{background:var(--blue-l);border:1px solid #B4CDE8;}
+.pk-box.err{background:var(--red-l);border:1px solid #E8B4B4;}
+.pk-it{text-align:center;}
+.pk-lbl{font-size:10px;margin-bottom:2px;}
+.pk-box.ok .pk-lbl{color:var(--blue-d);}
+.pk-box.err .pk-lbl{color:var(--red);}
+.pk-val{font-size:11px;font-weight:600;font-family:var(--mono);}
+.pk-box.ok .pk-val{color:var(--blue-d);}
+.pk-box.err .pk-val{color:var(--red);}
+.pk-dist{font-size:20px;font-weight:700;font-family:var(--mono);}
+.pk-box.ok .pk-dist{color:var(--blue);}
+.pk-box.err .pk-dist{color:var(--red);}
+.pk-dlbl{font-size:10px;}
+.pk-box.ok .pk-dlbl{color:var(--blue-d);}
+.pk-box.err .pk-dlbl{color:var(--red);}
+.pk-sep{font-size:16px;color:#8AAECF;}
+.pk-err-msg{background:var(--red-l);border:1px solid #E8B4B4;border-radius:var(--rs);padding:10px 12px;font-size:12px;color:var(--red);display:none;margin-bottom:10px;line-height:1.5;}
+.pk-ok-msg{background:var(--green-l);border:1px solid #9FD4B4;border-radius:var(--rs);padding:8px 12px;font-size:11px;color:var(--green-d);display:none;margin-bottom:10px;}
+/* NATURES */
+.family-block{margin-bottom:14px;}
+.family-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;padding:6px 0 8px;border-bottom:1px solid var(--border2);margin-bottom:8px;}
+.family-title.pave{color:var(--green-d);}
+.family-title.bic{color:var(--purple);}
+.nat-btn{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--rs);border:1px solid var(--border);background:var(--bg3);cursor:pointer;margin-bottom:6px;width:100%;text-align:left;}
+.nat-btn:active{opacity:.75;}
+.nat-btn.sel-pave{border-color:#3B6D11;background:var(--green-l);}
+.nat-btn.sel-bic{border-color:#5C44B8;background:var(--purple-l);}
+.nat-step{font-size:10px;font-weight:600;color:var(--text3);min-width:16px;}
+.nat-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.nat-info{flex:1;}
+.nat-name{font-size:13px;color:var(--text);}
+.nat-unit{font-size:10px;color:var(--text3);}
+.nat-badge{font-size:10px;padding:2px 7px;border-radius:99px;white-space:nowrap;}
+/* PAT */
+.pat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:4px;}
+.pat-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:10px 8px;text-align:center;}
+.pat-lbl{font-size:10px;color:var(--text2);font-weight:500;margin-bottom:6px;line-height:1.3;}
+.pat-inp{width:100%;font-size:20px;font-weight:700;padding:6px 4px;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--text);text-align:center;font-family:var(--mono);}
+.pat-unit{font-size:10px;color:var(--text3);margin-top:4px;}
+/* BTNS */
+.btn{width:100%;padding:13px;border-radius:var(--rs);font-size:15px;font-weight:600;border:none;cursor:pointer;}
+.btn:active{opacity:.82;}
+.btn-blue{background:var(--blue);color:#fff;}
+.btn-green{background:var(--green);color:#fff;}
+.btn-orange{background:var(--orange);color:#fff;}
+.btn-sm{font-size:12px;padding:7px 12px;border-radius:var(--rs);border:1px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;white-space:nowrap;}
+.btn-sm.danger{border-color:var(--red);background:var(--red-l);color:var(--red);}
+.btn-sm.success{border-color:var(--green);background:var(--green-l);color:var(--green);}
+.save-ok{display:none;border-radius:var(--rs);padding:10px 14px;font-size:13px;margin-top:8px;text-align:center;}
+.save-ok.blue{background:var(--blue-l);color:var(--blue-d);}
+.save-ok.green{background:var(--green-l);color:var(--green-d);}
+.save-ok.orange{background:var(--orange-l);color:var(--orange);}
+/* BADGES */
+.badge{font-size:10px;padding:3px 9px;border-radius:99px;font-weight:600;white-space:nowrap;}
+.b-pend{background:var(--amber-l);color:var(--amber);}
+.b-ok{background:var(--green-l);color:var(--green);}
+/* RÉCEPTIONS LISTE */
+.rec-item{padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px;position:relative;}
+.rec-item.pending{border-left:3px solid var(--amber);}
+.rec-item.confirmed{border-left:3px solid var(--green);}
+.rec-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;}
+.rec-nat{font-size:13px;font-weight:600;color:var(--text);}
+.rec-pk{font-size:11px;font-family:var(--mono);color:var(--text2);margin-top:2px;}
+.rec-meta{font-size:10px;color:var(--text3);margin-top:2px;}
+.rec-qty{font-size:12px;color:var(--green);font-weight:600;margin-top:4px;font-family:var(--mono);}
+.rec-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+/* PROFILS VOLUMES */
+.prof-cfg{background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin:8px 0;}
+.prof-cfg label{font-size:11px;color:var(--text2);font-weight:500;display:block;margin-bottom:5px;}
+.prof-cfg-row{display:flex;gap:8px;align-items:center;}
+.prof-cfg-row input{flex:1;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);background:#fff;color:var(--text);}
+.prof-cfg-row button{font-size:12px;padding:8px 12px;border-radius:var(--rs);border:1px solid var(--blue);background:var(--blue-l);color:var(--blue-d);cursor:pointer;font-weight:500;white-space:nowrap;}
+.prof-list{margin-top:8px;}
+.prof-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.prof-pk{font-size:11px;font-family:var(--mono);color:var(--text2);min-width:88px;}
+.prof-inp{flex:1;font-size:14px;font-weight:500;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);background:#fff;color:var(--text);text-align:right;font-family:var(--mono);}
+.prof-inp:focus{border-color:var(--blue);}
+.prof-unit{font-size:11px;color:var(--text3);min-width:26px;}
+.prof-total{display:flex;justify-content:space-between;align-items:center;background:var(--blue-l);border-radius:var(--rs);padding:10px 14px;margin-top:10px;}
+.prof-total-lbl{font-size:12px;color:var(--blue-d);font-weight:500;}
+.prof-total-val{font-size:18px;font-weight:700;color:var(--blue);font-family:var(--mono);}
+/* AVANCEMENT */
+.prog{margin-bottom:14px;}
+.prog:last-child{margin-bottom:0;}
+.prog-hd{display:flex;justify-content:space-between;margin-bottom:2px;}
+.prog-name{font-size:12px;color:var(--text);font-weight:500;}
+.prog-pct{font-size:12px;font-weight:700;}
+.prog-detail{font-size:10px;color:var(--text3);margin-bottom:6px;}
+.pbar-bg{background:var(--bg2);border-radius:99px;height:9px;}
+.pbar{height:9px;border-radius:99px;transition:width .5s;}
+.av-family{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--border2);}
+.m2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px;}
+.m-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;}
+.m-lbl{font-size:10px;color:var(--text2);margin-bottom:4px;display:flex;align-items:center;}
+.m-val{font-size:20px;font-weight:700;color:var(--text);font-family:var(--mono);}
+.m-sub{font-size:10px;color:var(--text3);margin-top:1px;}
+.global-card{background:var(--text);border-radius:var(--r);padding:16px;margin-bottom:10px;color:#fff;}
+.global-title{font-size:14px;font-weight:600;margin-bottom:14px;}
+.global-prog{margin-bottom:12px;}
+.global-prog-hd{display:flex;justify-content:space-between;margin-bottom:3px;}
+.global-prog-name{font-size:12px;color:rgba(255,255,255,.8);}
+.global-prog-pct{font-size:13px;font-weight:700;}
+.global-prog-sub{font-size:10px;color:rgba(255,255,255,.45);margin-bottom:5px;}
+.global-pbar-bg{background:rgba(255,255,255,.15);border-radius:99px;height:8px;}
+.global-pbar{height:8px;border-radius:99px;}
+/* RAPPORT TÂCHES SÉLECTIONNABLES */
+.rpt-task{display:flex;align-items:center;gap:10px;padding:12px;border:1.5px solid var(--border);border-radius:var(--rs);cursor:pointer;background:var(--bg3);margin-bottom:6px;}
+.rpt-task.selected{border-color:var(--blue);background:var(--blue-l);}
+.rpt-task-icon{width:32px;height:32px;border-radius:var(--rs);background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.rpt-task.selected .rpt-task-icon{background:var(--blue);}
+.rpt-task-info{flex:1;}
+.rpt-task-name{font-size:13px;font-weight:600;color:var(--text);}
+.rpt-task.selected .rpt-task-name{color:var(--blue-d);}
+.rpt-task-sub{font-size:10px;color:var(--text3);margin-top:2px;}
+.rpt-task.selected .rpt-task-sub{color:var(--blue-d);opacity:.7;}
+.rpt-check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;}
+.rpt-task.selected .rpt-check{background:var(--blue);border-color:var(--blue);color:#fff;}
+.rpt-section{margin-bottom:14px;}
+.rpt-sh{background:var(--text);color:#fff;border-radius:var(--rs) var(--rs) 0 0;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
+.rpt-sh-title{font-size:12px;font-weight:600;}
+.rpt-sh-sub{font-size:10px;color:rgba(255,255,255,.6);}
+.rpt-sb{background:var(--bg3);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--rs) var(--rs);overflow:hidden;}
+table{width:100%;border-collapse:collapse;font-size:11px;}
+th{padding:7px 6px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);background:var(--bg2);font-size:10px;}
+td{padding:7px 6px;color:var(--text);border-bottom:1px solid var(--border2);}
+tr:last-child td{border-bottom:none;}
+.td-mono{font-family:var(--mono);font-size:10px;}
+.tr-total td{background:var(--bg2);font-weight:700;}
+.tr-pat td{background:var(--orange-l);}
+.export-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.btn-pdf{padding:12px;border-radius:var(--rs);font-size:13px;font-weight:600;border:none;cursor:pointer;background:var(--red-l);color:var(--red);}
+.btn-xls{padding:12px;border-radius:var(--rs);font-size:13px;font-weight:600;border:none;cursor:pointer;background:var(--green-l);color:var(--green);}
+/* TABS */
+.stabs{display:flex;gap:0;margin-bottom:12px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.stab{flex:1;padding:10px 4px;font-size:12px;font-weight:600;border:none;cursor:pointer;background:var(--bg3);color:var(--text2);border-right:1px solid var(--border);}
+.stab:last-child{border-right:none;}
+.stab.active{background:var(--text);color:#fff;}
+.rs-row{display:flex;gap:5px;margin-bottom:12px;background:var(--bg2);padding:4px;border-radius:var(--r);flex-wrap:wrap;}
+.rs-btn{flex:1;min-width:55px;padding:7px 4px;font-size:11px;border:none;border-radius:9px;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;white-space:nowrap;}
+.rs-btn.active{background:var(--bg3);color:var(--text);border:1px solid var(--border);}
+/* AXES */
+.axe-item{display:flex;align-items:center;justify-content:space-between;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:6px;}
+.del-btn{font-size:11px;padding:4px 10px;border-radius:99px;border:1px solid var(--red);background:var(--red-l);color:var(--red);cursor:pointer;}
+/* SECTIONS */
+.section-obj{background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin-bottom:6px;}
+.section-obj-hd{display:flex;justify-content:space-between;align-items:flex-start;}
+.section-obj-pk{font-size:11px;font-family:var(--mono);color:var(--text);font-weight:500;}
+.section-obj-type{font-size:11px;color:var(--text2);}
+.section-obj-ml{font-size:13px;font-family:var(--mono);color:var(--blue);font-weight:700;}
+/* PAT HISTORY */
+.pat-hist-item{padding:10px 0;border-bottom:0.5px solid var(--border2);}
+.pat-hist-item:last-child{border-bottom:none;}
+.pat-hist-top{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;}
+.pat-hist-date{font-size:12px;font-weight:600;font-family:var(--mono);color:var(--text);}
+.pat-hist-meta{font-size:10px;color:var(--text3);}
+.pat-hist-vals{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;}
+.pat-hist-val{font-size:11px;background:var(--bg2);border-radius:99px;padding:3px 9px;color:var(--text2);}
+.pat-hist-val b{font-weight:600;color:var(--text);}
+.pat-hist-actions{display:flex;gap:5px;flex-shrink:0;}
+.btn-edit{font-size:11px;padding:4px 10px;border-radius:99px;border:1px solid var(--blue);background:var(--blue-l);color:var(--blue-d);cursor:pointer;}
+.btn-del-sm{font-size:11px;padding:4px 10px;border-radius:99px;border:1px solid var(--red);background:var(--red-l);color:var(--red);cursor:pointer;}
+/* OVERLAY */
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;}
+.overlay-box{background:var(--bg3);border-radius:var(--r);padding:22px;width:100%;max-width:340px;max-height:90vh;overflow-y:auto;}
+.overlay-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px;}
+.overlay-sub{font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.5;}
+.overlay-code{font-size:28px;font-weight:700;font-family:var(--mono);color:var(--blue);background:var(--blue-l);border-radius:var(--rs);padding:12px;text-align:center;letter-spacing:4px;margin-bottom:16px;}
+.overlay-err{font-size:12px;color:var(--red);margin-top:8px;text-align:center;display:none;}
+.empty-state{text-align:center;padding:20px;color:var(--text3);font-size:13px;}
+.no-sections-warn{background:var(--amber-l);border:1px solid #D4A870;border-radius:var(--rs);padding:10px 12px;font-size:12px;color:var(--amber);margin-bottom:10px;line-height:1.5;}
+</style>
+</head>
+<body>
+
+<div class="overlay" id="admin-overlay" style="display:none">
+  <div class="overlay-box" id="overlay-content"></div>
+</div>
+
+<div class="offline-bar" id="offline-bar">⚠ Hors ligne — saisies sauvegardées localement</div>
+
+<div class="topbar">
+  <div class="tb-brand"><h1>TopoCT</h1><p>Suivi topographique</p></div>
+  <div class="tb-right">
+    <span class="pending-badge" id="pending-badge">0</span>
+    <button class="role-pill r-topo" id="role-btn" onclick="requestAdmin()">Admin</button>
+  </div>
+</div>
+
+<div class="scroll" id="scroll-area">
+
+<!-- ══ PAGE SAISIE ══ -->
+<div class="page active" id="p-saisie">
+  <div class="stabs">
+    <button class="stab active" onclick="saisieTab('topo',this)">Réception</button>
+    <button class="stab" onclick="saisieTab('pat',this)">Points à temps</button>
+    <button class="stab" id="stab-admin" style="display:none" onclick="saisieTab('admin',this)">Admin</button>
+  </div>
+
+  <!-- TOPO -->
+  <div id="vue-topo">
+    <div id="no-sections-warn" class="no-sections-warn" style="display:none">
+      ⚠ Aucune section de travaux n'a été définie par l'admin. Les saisies sont bloquées tant que l'admin n'a pas ajouté des sections dans Admin → Sections.
+    </div>
+    <div class="card">
+      <div class="card-title">Identification <span class="cbadge cb-topo">Réception alti.</span></div>
+      <div class="f"><label>Axe</label><select id="t-axe" onchange="onAxeChange()"></select></div>
+      <div class="f-row2">
+        <div class="f" style="margin:0"><label>Date</label><input type="date" id="t-date"></div>
+        <div class="f" style="margin:0"><label>Heure</label><input type="time" id="t-heure" value="08:30"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Nature des travaux</div>
+      <div class="family-block">
+        <div class="family-title pave">Voirie — structure en pavés</div>
+        <button class="nat-btn" onclick="selNat(this,'plat_pave','pave')" data-key="plat_pave"><span class="nat-step">①</span><span class="nat-dot" style="background:#606060"></span><span class="nat-info"><span class="nat-name">Plateforme pavé</span><br><span class="nat-unit">ml</span></span></button>
+        <button class="nat-btn" onclick="selNat(this,'gnt20_pave','pave')" data-key="gnt20_pave"><span class="nat-step">②</span><span class="nat-dot" style="background:#1A5CA8"></span><span class="nat-info"><span class="nat-name">Couche de base GNT 20cm — pavé</span><br><span class="nat-unit">m³ — volume saisi par admin</span></span><span class="nat-badge" style="background:var(--blue-l);color:var(--blue-d)">m³</span></button>
+        <button class="nat-btn" onclick="selNat(this,'gnt15_pave','pave')" data-key="gnt15_pave"><span class="nat-step">②</span><span class="nat-dot" style="background:#2880C4"></span><span class="nat-info"><span class="nat-name">Couche de base GNT 15cm — pavé</span><br><span class="nat-unit">m³ — volume saisi par admin</span></span><span class="nat-badge" style="background:var(--blue-l);color:var(--blue-d)">m³</span></button>
+        <button class="nat-btn" onclick="selNat(this,'sable','pave')" data-key="sable"><span class="nat-step">③</span><span class="nat-dot" style="background:#C49010"></span><span class="nat-info"><span class="nat-name">Sable</span><br><span class="nat-unit">m³ — volume saisi par admin</span></span><span class="nat-badge" style="background:var(--amber-l);color:var(--amber)">m³</span></button>
+        <button class="nat-btn" onclick="selNat(this,'pave','pave')" data-key="pave"><span class="nat-step">④</span><span class="nat-dot" style="background:#256B3A"></span><span class="nat-info"><span class="nat-name">Pavés</span><br><span class="nat-unit">m³ — volume saisi par admin</span></span><span class="nat-badge" style="background:var(--green-l);color:var(--green)">m³</span></button>
+      </div>
+      <div class="family-block">
+        <div class="family-title bic">Zone bicouche</div>
+        <button class="nat-btn" onclick="selNat(this,'plat_bic','bic')" data-key="plat_bic"><span class="nat-step">①</span><span class="nat-dot" style="background:#606060"></span><span class="nat-info"><span class="nat-name">Plateforme bicouche</span><br><span class="nat-unit">ml</span></span></button>
+        <button class="nat-btn" onclick="selNat(this,'gnt20_bic','bic')" data-key="gnt20_bic"><span class="nat-step">②</span><span class="nat-dot" style="background:#1A7A72"></span><span class="nat-info"><span class="nat-name">Couche de base GNT 20cm — bicouche</span><br><span class="nat-unit">m³ — volume saisi par admin</span></span><span class="nat-badge" style="background:var(--green-l);color:var(--green-d)">m³</span></button>
+        <button class="nat-btn" onclick="selNat(this,'imp','bic')" data-key="imp"><span class="nat-step">③</span><span class="nat-dot" style="background:#B55C10"></span><span class="nat-info"><span class="nat-name">Imprégnation</span><br><span class="nat-unit">ml</span></span><span class="nat-badge" style="background:var(--orange-l);color:var(--orange)">ml</span></button>
+        <button class="nat-btn" onclick="selNat(this,'mono','bic')" data-key="mono"><span class="nat-step">④</span><span class="nat-dot" style="background:#5C44B8"></span><span class="nat-info"><span class="nat-name">Monocouche</span><br><span class="nat-unit">ml</span></span><span class="nat-badge" style="background:var(--purple-l);color:var(--purple)">ml</span></button>
+        <button class="nat-btn" onclick="selNat(this,'bic','bic')" data-key="bic"><span class="nat-step">⑤</span><span class="nat-dot" style="background:#A83860"></span><span class="nat-info"><span class="nat-name">Bicouche</span><br><span class="nat-unit">ml</span></span><span class="nat-badge" style="background:#FAE6EF;color:#A83860">ml</span></button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Points kilométriques</div>
+      <div class="f-row2">
+        <div class="f" style="margin:0"><label>PK début</label><input type="text" id="pk1" value="PK0+000" oninput="calcPK()"></div>
+        <div class="f" style="margin:0"><label>PK fin</label><input type="text" id="pk2" value="PK0+250" oninput="calcPK()"></div>
+      </div>
+      <div class="pk-box ok" id="pk-box">
+        <div class="pk-it"><div class="pk-lbl">Début</div><div class="pk-val" id="pk1d">PK0+000</div></div>
+        <div class="pk-sep">→</div>
+        <div class="pk-it"><div class="pk-dist" id="distd">250</div><div class="pk-dlbl">ml</div></div>
+        <div class="pk-sep">→</div>
+        <div class="pk-it"><div class="pk-lbl">Fin</div><div class="pk-val" id="pk2d">PK0+250</div></div>
+      </div>
+      <div class="pk-err-msg" id="pk-err-msg"></div>
+      <div class="pk-ok-msg" id="pk-ok-msg"></div>
+      <div class="f"><label>Observations</label><textarea placeholder="Remarques terrain..."></textarea></div>
+    </div>
+    <button class="btn btn-blue" onclick="saveRec()">Enregistrer la réception</button>
+    <div class="save-ok blue" id="save-ok-topo">✓ Réception enregistrée — en attente de validation admin</div>
+
+    <!-- RÉCEPTIONS EN ATTENTE (affichées en bas) -->
+    <div id="pending-recs-section" style="display:none">
+      <div class="sec">Mes réceptions — en attente de validation</div>
+      <div id="pending-recs-list"></div>
+    </div>
+  </div>
+
+  <!-- POINTS À TEMPS -->
+  <div id="vue-pat" style="display:none">
+    <div class="card" style="background:var(--amber-l);border-color:#D4A870;">
+      <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:4px;">Information</div>
+      <div style="font-size:12px;color:var(--amber);line-height:1.6;">Le topographe indique la date, l'axe et la zone. L'admin complète les quantités (m²).</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Identification <span class="cbadge cb-pat">Points à temps</span></div>
+      <div class="f"><label>Axe</label><select id="pat-axe"></select></div>
+      <div class="f-row2">
+        <div class="f" style="margin:0"><label>Date</label><input type="date" id="pat-date"></div>
+        <div class="f" style="margin:0"><label>Heure</label><input type="time" id="pat-heure" value="07:00"></div>
+      </div>
+      <div class="f"><label>Zone concernée</label><input type="text" id="pat-zone" placeholder="ex: PK61+000 à PK66+000"></div>
+      <div class="f"><label>Observations</label><textarea id="pat-obs" placeholder="Nature des désordres..."></textarea></div>
+    </div>
+    <button class="btn btn-orange" onclick="savePAT()">Signaler — admin complétera les quantités</button>
+    <div class="save-ok orange" id="save-ok-pat">✓ Signalement enregistré</div>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="vue-admin" style="display:none">
+    <div class="rs-row">
+      <button class="rs-btn active" onclick="adminTab('recep',this)">Réceptions</button>
+      <button class="rs-btn" onclick="adminTab('pat',this)">Pts à temps</button>
+      <button class="rs-btn" onclick="adminTab('axes',this)">Axes</button>
+      <button class="rs-btn" onclick="adminTab('obj',this)">Sections</button>
+      <button class="rs-btn" onclick="adminTab('bib',this)">Biblio PK</button>
+    </div>
+
+    <!-- RÉCEPTIONS ADMIN -->
+    <div id="adm-recep">
+      <div class="sec" style="margin-top:0">Réceptions en attente de validation</div>
+      <div id="adm-pending-list">
+        <div class="empty-state">Aucune réception en attente</div>
+      </div>
+      <div class="sec">Réceptions confirmées</div>
+      <div id="adm-confirmed-list">
+        <div class="empty-state">Aucune réception confirmée</div>
+      </div>
+    </div>
+
+    <!-- PAT ADMIN -->
+    <div id="adm-pat" style="display:none">
+      <div class="sec" style="margin-top:0">Signalements en attente de quantités</div>
+      <div class="card">
+        <div class="rec-item pending">
+          <div class="rec-top"><div><div class="rec-nat">Points à temps</div><div class="rec-pk">PK61+000 → PK66+000</div><div class="rec-meta">04/05/2026 · 07h00 · Ziguinchor–Cap · Topo 1</div></div><span class="badge b-pend">Quantités manquantes</span></div>
+          <div style="margin-top:8px">
+            <div class="f-row2" style="margin-bottom:8px">
+              <div class="f" style="margin:0"><label>Nids de poule (m²)</label><input type="number" id="pat-ndp-val" placeholder="0.0" step="0.1" min="0"></div>
+              <div class="f" style="margin:0"><label>Épaufrures (m²)</label><input type="number" id="pat-epauf-val" placeholder="0.0" step="0.1" min="0"></div>
+            </div>
+            <div class="f"><label>Déflachage (m²)</label><input type="number" id="pat-defl-val" placeholder="0.0" step="0.1" min="0"></div>
+            <button class="btn btn-green" style="margin-top:8px" onclick="valPAT()">Valider les quantités</button>
+          </div>
+        </div>
+      </div>
+      <div class="sec">Ajouter une entrée points à temps</div>
+      <div class="card">
+        <div class="card-title">Saisie directe <span class="cbadge cb-admin">Admin</span></div>
+        <div class="f"><label>Axe</label><select id="adm-pat-axe"></select></div>
+        <div class="f-row2">
+          <div class="f" style="margin:0"><label>Date</label><input type="date" id="adm-pat-date"></div>
+          <div class="f" style="margin:0"><label>Heure</label><input type="time" id="adm-pat-heure" value="07:00"></div>
+        </div>
+        <div class="f"><label>Zone</label><input type="text" id="adm-pat-zone" placeholder="ex: PK61+000 à PK66+000"></div>
+        <div class="f-row2">
+          <div class="f" style="margin:0"><label>Nids de poule (m²)</label><input type="number" id="adm-ndp" placeholder="0.0" step="0.1" min="0"></div>
+          <div class="f" style="margin:0"><label>Épaufrures (m²)</label><input type="number" id="adm-epauf" placeholder="0.0" step="0.1" min="0"></div>
+        </div>
+        <div class="f"><label>Déflachage (m²)</label><input type="number" id="adm-defl" placeholder="0.0" step="0.1" min="0"></div>
+        <button class="btn btn-orange" style="margin-top:4px" onclick="saveAdmPAT()">Enregistrer</button>
+        <div class="save-ok orange" id="save-adm-pat">✓ Points à temps enregistrés</div>
+      </div>
+      <div class="sec">Historique points à temps</div>
+      <div class="card" id="pat-history-list"><div class="empty-state">Aucune entrée</div></div>
+    </div>
+
+    <!-- AXES -->
+    <div id="adm-axes" style="display:none">
+      <div class="card">
+        <div class="card-title">Ajouter un axe</div>
+        <div class="f-row2">
+          <div class="f" style="margin:0"><label>Nom de l'axe</label><input type="text" id="new-axe-nom" placeholder="ex: Oussouye–Elinkine"></div>
+          <div class="f" style="margin:0;display:flex;align-items:flex-end"><button class="btn btn-blue" style="font-size:13px;padding:10px" onclick="addAxe()">+ Ajouter</button></div>
+        </div>
+      </div>
+      <div class="card"><div class="card-title">Axes définis</div><div id="axes-list"></div></div>
+    </div>
+
+    <!-- SECTIONS OBJECTIFS -->
+    <div id="adm-obj" style="display:none">
+      <div class="card">
+        <div class="card-title">Ajouter une section <span class="cbadge cb-admin">Admin</span></div>
+        <div class="f"><label>Axe</label><select id="obj-axe-sel"></select></div>
+        <div class="f"><label>Type de travaux</label>
+          <select id="obj-type">
+            <option value="pave">Voirie — Pavés (complet)</option>
+            <option value="bic">Zone — Bicouche (complet)</option>
+          </select>
+        </div>
+        <div class="f"><label>Méthode</label>
+          <select id="obj-methode" onchange="toggleObjMethod()">
+            <option value="pk">PK début → PK fin</option>
+            <option value="direct">Linéaire direct (ml)</option>
+          </select>
+        </div>
+        <div id="obj-pk-block">
+          <div class="f-row2">
+            <div class="f" style="margin:0"><label>PK début</label><input type="text" id="obj-pk1" placeholder="PK30+700" oninput="calcObjPK()"></div>
+            <div class="f" style="margin:0"><label>PK fin</label><input type="text" id="obj-pk2" placeholder="PK31+200" oninput="calcObjPK()"></div>
+          </div>
+          <div style="background:var(--blue-l);border-radius:var(--rs);padding:8px 12px;margin-top:6px;font-size:13px;color:var(--blue-d);font-family:var(--mono);font-weight:600" id="obj-calc">— ml calculés</div>
+        </div>
+        <div id="obj-direct-block" style="display:none">
+          <div class="f"><label>Linéaire (ml)</label><input type="number" id="obj-ml" placeholder="ex: 500"></div>
+        </div>
+        <button class="btn btn-blue" style="margin-top:8px" onclick="addObjSection()">+ Ajouter cette section</button>
+        <div class="save-ok green" id="save-obj">✓ Section ajoutée</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Sections définies</div>
+        <div id="sections-list"><div class="empty-state">Aucune section</div></div>
+        <div id="totaux-obj" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <!-- BIBLIO PK -->
+    <div id="adm-bib" style="display:none">
+      <div class="card">
+        <div class="card-title">Quantités par profil PK <span class="cbadge cb-admin">Pré-remplissage</span></div>
+        <div class="f"><label>Axe</label><select id="bib-axe-sel"></select></div>
+        <div class="f"><label>Nature</label>
+          <select id="bib-nature">
+            <option value="gnt20_pave">GNT 20cm — pavé (m³)</option>
+            <option value="gnt15_pave">GNT 15cm — pavé (m³)</option>
+            <option value="sable">Sable (m³)</option>
+            <option value="pave">Pavés (m³)</option>
+            <option value="gnt20_bic">GNT 20cm — bicouche (m³)</option>
+          </select>
+        </div>
+        <div class="f-row2">
+          <div class="f" style="margin:0"><label>PK début</label><input type="text" id="bib-pk1" placeholder="PK0+000" oninput="genBibProfils()"></div>
+          <div class="f" style="margin:0"><label>PK fin</label><input type="text" id="bib-pk2" placeholder="PK0+250" oninput="genBibProfils()"></div>
+        </div>
+        <div class="f"><label>Espacement (m)</label><input type="number" id="bib-esp" value="20" min="1" oninput="genBibProfils()"></div>
+        <div id="bib-profils" style="margin:8px 0"></div>
+        <button class="btn btn-green" onclick="saveBib()">Enregistrer les quantités</button>
+        <div class="save-ok green" id="save-bib">✓ Quantités enregistrées dans la bibliothèque</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Bibliothèque enregistrée</div>
+        <div id="bib-list"><div class="empty-state">Aucune entrée</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PAGE AVANCEMENT ══ -->
+<div class="page" id="p-avance">
+  <div id="av-content"><div class="empty-state" style="padding:30px">Définissez des sections dans Admin → Sections pour voir l'avancement.</div></div>
+  <div class="sec">Points à temps cumulés</div>
+  <div class="m2">
+    <div class="metric"><div class="m-lbl"><span class="m-dot" style="background:#888"></span>Nids de poule</div><div class="m-val" id="cum-ndp">0</div><div class="m-sub">m² traités</div></div>
+    <div class="metric"><div class="m-lbl"><span class="m-dot" style="background:#A06020"></span>Épaufrures</div><div class="m-val" id="cum-epauf">0</div><div class="m-sub">m² traités</div></div>
+    <div class="metric"><div class="m-lbl"><span class="m-dot" style="background:#B55C10"></span>Déflachage</div><div class="m-val" id="cum-defl">0</div><div class="m-sub">m² traités</div></div>
+  </div>
+</div>
+
+<!-- ══ PAGE RAPPORTS ══ -->
+<div class="page" id="p-rapport">
+  <div class="sec">Paramètres du rapport</div>
+  <div class="card">
+    <div class="card-title">Plage de dates</div>
+    <div class="f-row2">
+      <div class="f" style="margin:0"><label>Début</label><input type="date" id="rpt-d1"></div>
+      <div class="f" style="margin:0"><label>Fin</label><input type="date" id="rpt-d2"></div>
+    </div>
+    <div class="f" style="margin-top:8px"><label>Axe</label><select id="rpt-axe"></select></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Tâches à inclure</div>
+    <div id="rpt-tasks-list">
+      <div class="rpt-task selected" id="task-terr" onclick="toggleTask(this)"><div class="rpt-task-icon">📋</div><div class="rpt-task-info"><div class="rpt-task-name">Terrassement — Réceptions</div><div class="rpt-task-sub">PK, nature, date, heure, quantités confirmées</div></div><div class="rpt-check">✓</div></div>
+      <div class="rpt-task selected" id="task-av" onclick="toggleTask(this)"><div class="rpt-task-icon">📊</div><div class="rpt-task-info"><div class="rpt-task-name">Avancement global</div><div class="rpt-task-sub">% par nature et par axe</div></div><div class="rpt-check">✓</div></div>
+      <div class="rpt-task" id="task-pat" onclick="toggleTask(this)"><div class="rpt-task-icon">🛣️</div><div class="rpt-task-info"><div class="rpt-task-name">Points à temps</div><div class="rpt-task-sub">Nids de poule, épaufrures, déflachage (m²)</div></div><div class="rpt-check"></div></div>
+      <div class="rpt-task" id="task-cumul" onclick="toggleTask(this)"><div class="rpt-task-icon">∑</div><div class="rpt-task-info"><div class="rpt-task-name">Cumuls par PK</div><div class="rpt-task-sub">Total cumulé depuis le début</div></div><div class="rpt-check"></div></div>
+    </div>
+    <button class="btn btn-blue" style="margin-top:10px" onclick="genRapport()">Générer le rapport</button>
+  </div>
+  <div id="rpt-preview" style="display:none">
+    <div class="sec">Aperçu — données réelles uniquement</div>
+    <div id="rpt-content"></div>
+    <div class="export-row">
+      <button class="btn-pdf" onclick="exportPDF()">⬇ PDF</button>
+      <button class="btn-xls" onclick="exportExcel()">⬇ Excel</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<nav class="nav">
+  <button class="ni active" onclick="goPage('saisie',this)"><svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="2" width="14" height="18" rx="2"/><line x1="7.5" y1="8" x2="14.5" y2="8"/><line x1="7.5" y1="11.5" x2="14.5" y2="11.5" opacity=".5"/><line x1="7.5" y1="15" x2="11" y2="15" opacity=".3"/></svg>Saisie</button>
+  <button class="ni" onclick="goPage('avance',this)"><svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="14" width="4.5" height="6" rx="1"/><rect x="8.75" y="10" width="4.5" height="10" rx="1"/><rect x="14.5" y="5" width="4.5" height="15" rx="1"/></svg>Avancement</button>
+  <button class="ni" onclick="goPage('rapport',this)"><svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="16" height="16" rx="2"/><line x1="7" y1="8" x2="15" y2="8"/><line x1="7" y1="11.5" x2="15" y2="11.5" opacity=".5"/><line x1="7" y1="15" x2="11" y2="15" opacity=".3"/></svg>Rapports</button>
+</nav>
+
+<script>
+// ── STORAGE ──
+const LS={
+  get:k=>{try{return JSON.parse(localStorage.getItem('tct_'+k));}catch{return null;}},
+  set:(k,v)=>localStorage.setItem('tct_'+k,JSON.stringify(v))
+};
+
+// ── STATE ──
+let AXES=LS.get('axes')||['Ziguinchor – Cap Skirring','Oussouye – Mlomp'];
+let SECTIONS=LS.get('sections')||[];
+// Réceptions : status = 'pending' | 'confirmed'
+let RECEPTIONS=LS.get('receptions')||[];
+let PAT_DATA=LS.get('pat_data')||[];
+let BIB_DATA=LS.get('bib_data')||[];
+let ADMIN_PWD=LS.get('admin_pwd')||null;
+let ADMIN_DEVICE=LS.get('admin_device')||null;
+let IS_ADMIN=false;
+const FIRST_PWD='1234';
+const DEVICE_ID=(()=>{let id=localStorage.getItem('tct_device');if(!id){id=Math.random().toString(36).slice(2,10);localStorage.setItem('tct_device',id);}return id;})();
+let selectedNatKey=null;
+let selectedTasks=new Set(['task-terr','task-av']);
+
+// Nature config
+const NATURES={
+  plat_pave:{label:'Plateforme pavé',color:'#606060',unit:'ml',family:'pave'},
+  gnt20_pave:{label:'GNT 20cm — pavé',color:'#1A5CA8',unit:'m³',family:'pave'},
+  gnt15_pave:{label:'GNT 15cm — pavé',color:'#2880C4',unit:'m³',family:'pave'},
+  sable:{label:'Sable',color:'#C49010',unit:'m³',family:'pave'},
+  pave:{label:'Pavés',color:'#256B3A',unit:'m³',family:'pave'},
+  plat_bic:{label:'Plateforme bicouche',color:'#606060',unit:'ml',family:'bic'},
+  gnt20_bic:{label:'GNT 20cm — bicouche',color:'#1A7A72',unit:'m³',family:'bic'},
+  imp:{label:'Imprégnation',color:'#B55C10',unit:'ml',family:'bic'},
+  mono:{label:'Monocouche',color:'#5C44B8',unit:'ml',family:'bic'},
+  bic:{label:'Bicouche',color:'#A83860',unit:'ml',family:'bic'}
+};
+
+// ── PK ──
+function parsePK(s){const m=s.trim().match(/^PK(\d+)\+(\d+)$/i);return m?parseInt(m[1])*1000+parseInt(m[2]):null;}
+function fmtPK(n){const k=Math.floor(n/1000),r=n%1000;return'PK'+k+'+'+String(r).padStart(3,'0');}
+function fmtDate(d){if(!d)return'—';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+function fmtN(n){const v=parseFloat(n)||0;return v%1===0?v.toFixed(0):v.toFixed(1);}
+
+// Vérifier si les PK sont dans une section définie par l'admin
+function pkInSection(axe, p1m, p2m){
+  const axeSections=SECTIONS.filter(s=>s.axe===axe);
+  if(!axeSections.length) return {ok:false, msg:'Aucune section définie pour cet axe. L\'admin doit d\'abord ajouter des sections dans Admin → Sections.'};
+  // Chercher une section qui contient les deux PK
+  const match=axeSections.find(s=>{
+    if(!s.pk1m||!s.pk2m) return false;
+    return p1m>=s.pk1m && p2m<=s.pk2m;
+  });
+  if(match) return {ok:true, msg:`✓ Section trouvée : ${match.pk1} → ${match.pk2} (${match.type==='pave'?'Voirie pavés':'Zone bicouche'})`};
+  // Chercher si les PK sont proches d'une section existante pour message d'erreur utile
+  const closest=axeSections.map(s=>s.pk1?`${s.pk1} → ${s.pk2}`:'').filter(Boolean).join(', ');
+  return {ok:false, msg:`PK hors section. Sections définies : ${closest||'aucune'}. Contactez l\'admin pour ajouter cette section.`};
+}
+
+function calcPK(){
+  const s=document.getElementById('pk1').value;
+  const e=document.getElementById('pk2').value;
+  const ps=parsePK(s),pe=parsePK(e);
+  document.getElementById('pk1d').textContent=s;
+  document.getElementById('pk2d').textContent=e;
+  const box=document.getElementById('pk-box');
+  const errMsg=document.getElementById('pk-err-msg');
+  const okMsg=document.getElementById('pk-ok-msg');
+  errMsg.style.display='none';okMsg.style.display='none';
+  if(ps!==null&&pe!==null&&pe>ps){
+    document.getElementById('distd').textContent=(pe-ps);
+    const axe=document.getElementById('t-axe').value;
+    const check=pkInSection(axe,ps,pe);
+    if(check.ok){
+      box.className='pk-box ok';
+      okMsg.textContent=check.msg;okMsg.style.display='block';
+    } else {
+      box.className='pk-box err';
+      errMsg.textContent=check.msg;errMsg.style.display='block';
+    }
+  } else {
+    document.getElementById('distd').textContent='—';
+    box.className='pk-box ok';
+  }
+}
+
+function onAxeChange(){calcPK();}
+
+// ── NATURE SELECTION ──
+function selNat(btn,key,family){
+  document.querySelectorAll('.nat-btn').forEach(b=>b.classList.remove('sel-pave','sel-bic'));
+  btn.classList.add('sel-'+family);
+  selectedNatKey=key;
+}
+
+// ── AXES ──
+function populateAxeSelects(){
+  const ids=['t-axe','pat-axe','adm-pat-axe','obj-axe-sel','bib-axe-sel'];
+  ids.forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    const prev=el.value;
+    el.innerHTML=AXES.map(a=>`<option value="${a}">${a}</option>`).join('');
+    if(AXES.includes(prev))el.value=prev;
+  });
+  const rpt=document.getElementById('rpt-axe');
+  if(rpt){rpt.innerHTML='<option value="tous">Tous les axes</option>'+AXES.map(a=>`<option value="${a}">${a}</option>`).join('');}
+  renderAxesList();
+  checkNoSections();
+}
+function renderAxesList(){
+  const c=document.getElementById('axes-list');if(!c)return;
+  if(!AXES.length){c.innerHTML='<div class="empty-state">Aucun axe défini</div>';return;}
+  c.innerHTML=AXES.map((a,i)=>`<div class="axe-item"><span style="font-size:13px;font-weight:500">${a}</span><button class="del-btn" onclick="delAxe(${i})">Supprimer</button></div>`).join('');
+}
+function addAxe(){
+  const v=document.getElementById('new-axe-nom').value.trim();if(!v)return;
+  AXES.push(v);LS.set('axes',AXES);
+  document.getElementById('new-axe-nom').value='';
+  populateAxeSelects();
+}
+function delAxe(i){
+  if(!confirm('Supprimer cet axe ?'))return;
+  AXES.splice(i,1);LS.set('axes',AXES);populateAxeSelects();
+}
+function checkNoSections(){
+  const axe=document.getElementById('t-axe').value;
+  const hasSections=SECTIONS.some(s=>s.axe===axe);
+  document.getElementById('no-sections-warn').style.display=hasSections?'none':'block';
+}
+
+// ── SECTIONS ──
+function toggleObjMethod(){
+  const m=document.getElementById('obj-methode').value;
+  document.getElementById('obj-pk-block').style.display=m==='pk'?'block':'none';
+  document.getElementById('obj-direct-block').style.display=m==='direct'?'block':'none';
+}
+function calcObjPK(){
+  const p1=parsePK(document.getElementById('obj-pk1').value);
+  const p2=parsePK(document.getElementById('obj-pk2').value);
+  document.getElementById('obj-calc').textContent=(p1!==null&&p2!==null&&p2>p1)?(p2-p1).toLocaleString('fr-FR')+' ml calculés':'— ml calculés';
+}
+function addObjSection(){
+  const axe=document.getElementById('obj-axe-sel').value;
+  const type=document.getElementById('obj-type').value;
+  const methode=document.getElementById('obj-methode').value;
+  let ml=0,pk1str='',pk2str='',pk1m=null,pk2m=null;
+  if(methode==='pk'){
+    const p1=parsePK(document.getElementById('obj-pk1').value);
+    const p2=parsePK(document.getElementById('obj-pk2').value);
+    if(p1!==null&&p2!==null&&p2>p1){ml=p2-p1;pk1str=document.getElementById('obj-pk1').value;pk2str=document.getElementById('obj-pk2').value;pk1m=p1;pk2m=p2;}
+  } else {ml=parseFloat(document.getElementById('obj-ml').value)||0;}
+  if(!ml)return;
+  SECTIONS.push({axe,type,ml,pk1:pk1str,pk2:pk2str,pk1m,pk2m,id:Date.now()});
+  LS.set('sections',SECTIONS);
+  const ok=document.getElementById('save-obj');ok.style.display='block';
+  setTimeout(()=>ok.style.display='none',3000);
+  renderSections();renderAvancement();checkNoSections();
+}
+function renderSections(){
+  const c=document.getElementById('sections-list');if(!c)return;
+  if(!SECTIONS.length){c.innerHTML='<div class="empty-state">Aucune section définie</div>';return;}
+  const typeLabel={pave:'Voirie pavés',bic:'Zone bicouche'};
+  c.innerHTML=SECTIONS.map((s,i)=>`
+    <div class="section-obj">
+      <div class="section-obj-hd">
+        <div>
+          <div class="section-obj-pk">${s.pk1&&s.pk2?s.pk1+' → '+s.pk2:'Linéaire direct'}</div>
+          <div class="section-obj-type">${s.axe} — ${typeLabel[s.type]||s.type}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="section-obj-ml">${s.ml.toLocaleString('fr-FR')} ml</span>
+          <button class="del-btn" onclick="delSection(${i})">×</button>
+        </div>
+      </div>
+    </div>`).join('');
+  // Totaux
+  const totPave=SECTIONS.filter(s=>s.type==='pave').reduce((a,s)=>a+s.ml,0);
+  const totBic=SECTIONS.filter(s=>s.type==='bic').reduce((a,s)=>a+s.ml,0);
+  const tc=document.getElementById('totaux-obj');
+  tc.innerHTML=(totPave?`<div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--green-l);border-radius:var(--rs);margin-bottom:6px;font-size:12px"><span style="color:var(--green-d);font-weight:500">Total voirie pavés</span><span style="font-family:var(--mono);font-weight:700;color:var(--green)">${totPave.toLocaleString('fr-FR')} ml</span></div>`:'')+
+    (totBic?`<div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--purple-l);border-radius:var(--rs);font-size:12px"><span style="color:var(--purple);font-weight:500">Total zone bicouche</span><span style="font-family:var(--mono);font-weight:700;color:var(--purple)">${totBic.toLocaleString('fr-FR')} ml</span></div>`:'');
+}
+function delSection(i){
+  if(!confirm('Supprimer cette section ?'))return;
+  SECTIONS.splice(i,1);LS.set('sections',SECTIONS);
+  renderSections();renderAvancement();checkNoSections();
+}
+
+// ── SAVE RÉCEPTION ──
+function saveRec(){
+  if(!selectedNatKey){alert('Choisissez une nature de travaux.');return;}
+  const axe=document.getElementById('t-axe').value;
+  const date=document.getElementById('t-date').value;
+  const heure=document.getElementById('t-heure').value;
+  const p1=parsePK(document.getElementById('pk1').value);
+  const p2=parsePK(document.getElementById('pk2').value);
+  if(p1===null||p2===null||p2<=p1){alert('PK invalides.');return;}
+  // Vérification PK dans section
+  const check=pkInSection(axe,p1,p2);
+  if(!check.ok){alert('⛔ '+check.msg);return;}
+  const ml=p2-p1;
+  const rec={
+    id:Date.now(),axe,natKey:selectedNatKey,
+    natLabel:NATURES[selectedNatKey].label,
+    pk1m:p1,pk2m:p2,pk1str:document.getElementById('pk1').value,
+    pk2str:document.getElementById('pk2').value,
+    ml,date,heure,status:'pending',qty:null,
+    createdBy:IS_ADMIN?'admin':'topo'
+  };
+  RECEPTIONS.push(rec);LS.set('receptions',RECEPTIONS);
+  updatePendingBadge();
+  const ok=document.getElementById('save-ok-topo');ok.style.display='block';
+  setTimeout(()=>ok.style.display='none',3000);
+  renderPendingRecs();renderAdminRecs();renderAvancement();
+}
+
+// ── AFFICHAGE RÉCEPTIONS EN ATTENTE (vue topographe) ──
+function renderPendingRecs(){
+  const pending=RECEPTIONS.filter(r=>r.status==='pending');
+  const section=document.getElementById('pending-recs-section');
+  const list=document.getElementById('pending-recs-list');
+  if(!pending.length){section.style.display='none';return;}
+  section.style.display='block';
+  list.innerHTML=pending.map(r=>{
+    const nat=NATURES[r.natKey];
+    return `<div class="rec-item pending">
+      <div class="rec-top">
+        <div>
+          <div class="rec-nat">${r.natLabel}</div>
+          <div class="rec-pk">${r.pk1str} → ${r.pk2str} · ${r.ml} ml</div>
+          <div class="rec-meta">${fmtDate(r.date)} · ${r.heure||''} · ${r.axe}</div>
+        </div>
+        <span class="badge b-pend">En attente</span>
+      </div>
+      <div class="rec-actions">
+        <button class="btn-sm" onclick="editRec(${r.id})">Modifier</button>
+        <button class="btn-sm danger" onclick="deleteRec(${r.id})">Supprimer</button>
+      </div>
+    </div>`;
+  }).join('');
+  updatePendingBadge();
+}
+
+// ── RÉCEPTIONS VUE ADMIN ──
+function renderAdminRecs(){
+  const pending=RECEPTIONS.filter(r=>r.status==='pending');
+  const confirmed=RECEPTIONS.filter(r=>r.status==='confirmed');
+  const pendList=document.getElementById('adm-pending-list');
+  const confList=document.getElementById('adm-confirmed-list');
+
+  // En attente
+  if(!pending.length){pendList.innerHTML='<div class="empty-state">Aucune réception en attente</div>';}
+  else{
+    pendList.innerHTML=pending.map(r=>{
+      const nat=NATURES[r.natKey];
+      const needsVol=['gnt20_pave','gnt15_pave','sable','pave','gnt20_bic'].includes(r.natKey);
+      return `<div class="rec-item pending">
+        <div class="rec-top">
+          <div>
+            <div class="rec-nat">${r.natLabel}</div>
+            <div class="rec-pk">${r.pk1str} → ${r.pk2str} · ${r.ml} ml</div>
+            <div class="rec-meta">${fmtDate(r.date)} · ${r.heure||''} · ${r.axe}</div>
+          </div>
+          <span class="badge b-pend">En attente</span>
+        </div>
+        ${needsVol?`
+        <div class="prof-cfg" style="margin-top:8px">
+          <label>Volume total (m³) — depuis projet d'exécution</label>
+          <div class="prof-cfg-row">
+            <input type="number" id="vol-${r.id}" step="0.01" placeholder="ex: 320.50">
+            <span style="font-size:12px;color:var(--text3)">m³</span>
+          </div>
+        </div>`:''}
+        <div class="rec-actions">
+          <button class="btn-sm" onclick="editRec(${r.id})">Modifier</button>
+          <button class="btn-sm danger" onclick="deleteRec(${r.id})">Supprimer</button>
+          <button class="btn-sm success" onclick="confirmRec(${r.id})">✓ Confirmer</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Confirmées
+  if(!confirmed.length){confList.innerHTML='<div class="empty-state">Aucune réception confirmée</div>';}
+  else{
+    confList.innerHTML=confirmed.map(r=>{
+      const nat=NATURES[r.natKey];
+      return `<div class="rec-item confirmed">
+        <div class="rec-top">
+          <div>
+            <div class="rec-nat">${r.natLabel}</div>
+            <div class="rec-pk">${r.pk1str} → ${r.pk2str} · ${r.ml} ml</div>
+            <div class="rec-meta">${fmtDate(r.date)} · ${r.heure||''} · ${r.axe}</div>
+            ${r.qty?`<div class="rec-qty">${fmtN(r.qty)} ${nat?nat.unit:'ml'}</div>`:''}
+          </div>
+          <span class="badge b-ok">Confirmé</span>
+        </div>
+        <div class="rec-actions">
+          <button class="btn-sm" onclick="editRec(${r.id})">Modifier</button>
+          <button class="btn-sm danger" onclick="deleteRec(${r.id})">Supprimer</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function confirmRec(id){
+  const i=RECEPTIONS.findIndex(r=>r.id===id);if(i<0)return;
+  const r=RECEPTIONS[i];
+  const needsVol=['gnt20_pave','gnt15_pave','sable','pave','gnt20_bic'].includes(r.natKey);
+  let qty=null;
+  if(needsVol){
+    const volEl=document.getElementById('vol-'+id);
+    if(volEl) qty=parseFloat(volEl.value)||null;
+  }
+  RECEPTIONS[i]={...r,status:'confirmed',qty,confirmedAt:new Date().toISOString()};
+  LS.set('receptions',RECEPTIONS);
+  updatePendingBadge();renderPendingRecs();renderAdminRecs();renderAvancement();
+}
+
+function editRec(id){
+  const r=RECEPTIONS.find(x=>x.id===id);if(!r)return;
+  document.getElementById('overlay-content').innerHTML=`
+    <div class="overlay-title">Modifier la réception</div>
+    <div class="overlay-sub">${r.natLabel} · ${r.axe}</div>
+    <div class="f-row2">
+      <div class="f" style="margin:0"><label>Date</label><input type="date" id="edit-date" value="${r.date||''}"></div>
+      <div class="f" style="margin:0"><label>Heure</label><input type="time" id="edit-heure" value="${r.heure||'08:00'}"></div>
+    </div>
+    <div class="f-row2" style="margin-top:8px">
+      <div class="f" style="margin:0"><label>PK début</label><input type="text" id="edit-pk1" value="${r.pk1str||''}"></div>
+      <div class="f" style="margin:0"><label>PK fin</label><input type="text" id="edit-pk2" value="${r.pk2str||''}"></div>
+    </div>
+    <div class="overlay-err" id="overlay-err"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-sm" style="flex:1" onclick="closeOverlay()">Annuler</button>
+      <button class="btn btn-green" style="flex:2;padding:10px" onclick="saveEditRec(${id})">Enregistrer</button>
+    </div>`;
+  document.getElementById('admin-overlay').style.display='flex';
+}
+
+function saveEditRec(id){
+  const i=RECEPTIONS.findIndex(r=>r.id===id);if(i<0)return;
+  const p1=parsePK(document.getElementById('edit-pk1').value);
+  const p2=parsePK(document.getElementById('edit-pk2').value);
+  if(p1===null||p2===null||p2<=p1){
+    document.getElementById('overlay-err').textContent='PK invalides.';
+    document.getElementById('overlay-err').style.display='block';return;
+  }
+  const axe=RECEPTIONS[i].axe;
+  const check=pkInSection(axe,p1,p2);
+  if(!check.ok){
+    document.getElementById('overlay-err').textContent=check.msg;
+    document.getElementById('overlay-err').style.display='block';return;
+  }
+  RECEPTIONS[i]={...RECEPTIONS[i],
+    date:document.getElementById('edit-date').value,
+    heure:document.getElementById('edit-heure').value,
+    pk1m:p1,pk2m:p2,
+    pk1str:document.getElementById('edit-pk1').value,
+    pk2str:document.getElementById('edit-pk2').value,
+    ml:p2-p1
+  };
+  LS.set('receptions',RECEPTIONS);
+  closeOverlay();renderPendingRecs();renderAdminRecs();renderAvancement();
+}
+
+function deleteRec(id){
+  if(!confirm('Supprimer cette réception ?'))return;
+  RECEPTIONS=RECEPTIONS.filter(r=>r.id!==id);
+  LS.set('receptions',RECEPTIONS);
+  updatePendingBadge();renderPendingRecs();renderAdminRecs();renderAvancement();
+}
+
+function updatePendingBadge(){
+  const pending=RECEPTIONS.filter(r=>r.status==='pending').length;
+  const badge=document.getElementById('pending-badge');
+  if(pending>0){badge.textContent=pending;badge.style.display='inline-block';}
+  else badge.style.display='none';
+}
+
+// ── PAT ──
+function savePAT(){
+  const ok=document.getElementById('save-ok-pat');ok.style.display='block';
+  setTimeout(()=>ok.style.display='none',3000);
+}
+function valPAT(){alert('Quantités validées.');}
+function saveAdmPAT(){
+  const entry={
+    id:Date.now(),
+    axe:document.getElementById('adm-pat-axe').value,
+    date:document.getElementById('adm-pat-date').value,
+    heure:document.getElementById('adm-pat-heure').value,
+    zone:document.getElementById('adm-pat-zone').value,
+    ndp:parseFloat(document.getElementById('adm-ndp').value)||0,
+    epauf:parseFloat(document.getElementById('adm-epauf').value)||0,
+    defl:parseFloat(document.getElementById('adm-defl').value)||0
+  };
+  PAT_DATA.push(entry);LS.set('pat_data',PAT_DATA);
+  ['adm-ndp','adm-epauf','adm-defl','adm-pat-zone'].forEach(id=>document.getElementById(id).value='');
+  const ok=document.getElementById('save-adm-pat');ok.style.display='block';
+  setTimeout(()=>ok.style.display='none',3000);
+  renderPATHistory();updatePATCumuls();
+}
+function renderPATHistory(){
+  const c=document.getElementById('pat-history-list');if(!c)return;
+  if(!PAT_DATA.length){c.innerHTML='<div class="empty-state">Aucune entrée</div>';return;}
+  c.innerHTML=[...PAT_DATA].reverse().map((p,ri)=>{
+    const i=PAT_DATA.length-1-ri;
+    return `<div class="pat-hist-item">
+      <div class="pat-hist-top">
+        <div>
+          <div class="pat-hist-date">${fmtDate(p.date)} · ${p.heure||''}</div>
+          <div class="pat-hist-meta">${p.axe} · ${p.zone||''}</div>
+        </div>
+        <div class="pat-hist-actions">
+          <button class="btn-edit" onclick="editPAT(${i})">Modifier</button>
+          <button class="btn-del-sm" onclick="delPAT(${i})">Supprimer</button>
+        </div>
+      </div>
+      <div class="pat-hist-vals">
+        <span class="pat-hist-val">Nids : <b>${fmtN(p.ndp)} m²</b></span>
+        <span class="pat-hist-val">Épauf : <b>${fmtN(p.epauf)} m²</b></span>
+        <span class="pat-hist-val">Défl : <b>${fmtN(p.defl)} m²</b></span>
+      </div>
+    </div>`;
+  }).join('');
+}
+function delPAT(i){
+  if(!confirm('Supprimer ?'))return;
+  PAT_DATA.splice(i,1);LS.set('pat_data',PAT_DATA);
+  renderPATHistory();updatePATCumuls();
+}
+function editPAT(i){
+  const p=PAT_DATA[i];
+  document.getElementById('overlay-content').innerHTML=`
+    <div class="overlay-title">Modifier — Points à temps</div>
+    <div class="overlay-sub">${fmtDate(p.date)} · ${p.axe}</div>
+    <div class="f"><label>Zone</label><input type="text" id="e-zone" value="${p.zone||''}"></div>
+    <div class="f-row2">
+      <div class="f" style="margin:0"><label>Date</label><input type="date" id="e-date" value="${p.date||''}"></div>
+      <div class="f" style="margin:0"><label>Heure</label><input type="time" id="e-heure" value="${p.heure||'07:00'}"></div>
+    </div>
+    <div class="f-row2" style="margin-top:4px">
+      <div class="f" style="margin:0"><label>Nids de poule (m²)</label><input type="number" id="e-ndp" value="${p.ndp||0}" step="0.1" min="0"></div>
+      <div class="f" style="margin:0"><label>Épaufrures (m²)</label><input type="number" id="e-epauf" value="${p.epauf||0}" step="0.1" min="0"></div>
+    </div>
+    <div class="f" style="margin-top:8px"><label>Déflachage (m²)</label><input type="number" id="e-defl" value="${p.defl||0}" step="0.1" min="0"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn-sm" style="flex:1" onclick="closeOverlay()">Annuler</button>
+      <button class="btn btn-green" style="flex:2;padding:10px" onclick="saveEditPAT(${i})">Enregistrer</button>
+    </div>`;
+  document.getElementById('admin-overlay').style.display='flex';
+}
+function saveEditPAT(i){
+  PAT_DATA[i]={...PAT_DATA[i],
+    zone:document.getElementById('e-zone').value,
+    date:document.getElementById('e-date').value,
+    heure:document.getElementById('e-heure').value,
+    ndp:parseFloat(document.getElementById('e-ndp').value)||0,
+    epauf:parseFloat(document.getElementById('e-epauf').value)||0,
+    defl:parseFloat(document.getElementById('e-defl').value)||0
+  };
+  LS.set('pat_data',PAT_DATA);closeOverlay();renderPATHistory();updatePATCumuls();
+}
+function updatePATCumuls(){
+  const tN=PAT_DATA.reduce((a,p)=>a+(p.ndp||0),0);
+  const tE=PAT_DATA.reduce((a,p)=>a+(p.epauf||0),0);
+  const tD=PAT_DATA.reduce((a,p)=>a+(p.defl||0),0);
+  ['cum-ndp','cum-epauf','cum-defl'].forEach((id,j)=>{
+    const el=document.getElementById(id);if(el)el.textContent=fmtN([tN,tE,tD][j]);
+  });
+}
+
+// ── BIBLIO PK ──
+function genBibProfils(){
+  const p1=parsePK(document.getElementById('bib-pk1').value);
+  const p2=parsePK(document.getElementById('bib-pk2').value);
+  const esp=parseInt(document.getElementById('bib-esp').value)||20;
+  const c=document.getElementById('bib-profils');
+  if(p1===null||p2===null||p2<=p1){c.innerHTML='';return;}
+  const pks=[];for(let p=p1;p<=p2;p+=esp)pks.push(p);if(pks[pks.length-1]!==p2)pks.push(p2);
+  c.innerHTML=pks.map(pk=>`<div class="prof-row"><span class="prof-pk">${fmtPK(pk)}</span><input type="number" class="prof-inp" data-pk="${pk}" placeholder="0.00" step="0.01"><span class="prof-unit">m³</span></div>`).join('');
+}
+function saveBib(){
+  const axe=document.getElementById('bib-axe-sel').value;
+  const natKey=document.getElementById('bib-nature').value;
+  const natLabels={gnt20_pave:'GNT 20cm — pavé',gnt15_pave:'GNT 15cm — pavé',sable:'Sable',pave:'Pavés',gnt20_bic:'GNT 20cm — bicouche'};
+  const rows=document.querySelectorAll('#bib-profils .prof-row');
+  const profils=[];
+  rows.forEach(row=>{
+    const pk=parseInt(row.querySelector('input').dataset.pk);
+    const vol=parseFloat(row.querySelector('input').value)||0;
+    profils.push({pk,pkLabel:fmtPK(pk),vol});
+  });
+  if(!profils.length)return;
+  const entry={
+    id:Date.now(),axe,natKey,natLabel:natLabels[natKey]||natKey,
+    pk1:document.getElementById('bib-pk1').value,
+    pk2:document.getElementById('bib-pk2').value,
+    profils,
+    totalVol:profils.reduce((a,p)=>a+p.vol,0)
+  };
+  BIB_DATA.push(entry);LS.set('bib_data',BIB_DATA);
+  const ok=document.getElementById('save-bib');ok.style.display='block';
+  setTimeout(()=>ok.style.display='none',3000);
+  renderBibList();
+}
+function renderBibList(){
+  const c=document.getElementById('bib-list');if(!c)return;
+  if(!BIB_DATA.length){c.innerHTML='<div class="empty-state">Aucune entrée dans la bibliothèque</div>';return;}
+  c.innerHTML=[...BIB_DATA].reverse().map((b,ri)=>{
+    const i=BIB_DATA.length-1-ri;
+    return `<div class="section-obj" style="margin-bottom:8px">
+      <div class="section-obj-hd">
+        <div>
+          <div class="section-obj-pk">${b.pk1} → ${b.pk2}</div>
+          <div class="section-obj-type">${b.axe} — ${b.natLabel}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">${b.profils.length} profil(s) · Total : ${fmtN(b.totalVol)} m³</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="del-btn" onclick="delBib(${i})">Supprimer</button>
+        </div>
+      </div>
+      <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px">
+        ${b.profils.map(p=>`<span style="font-size:10px;background:var(--blue-l);color:var(--blue-d);padding:2px 8px;border-radius:99px;font-family:var(--mono)">${p.pkLabel}: ${fmtN(p.vol)} m³</span>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+function delBib(i){
+  if(!confirm('Supprimer cette entrée de la bibliothèque PK ?'))return;
+  BIB_DATA.splice(i,1);LS.set('bib_data',BIB_DATA);renderBibList();
+}
+
+// ── AVANCEMENT ── (uniquement réceptions confirmées)
+function getConfirmedLinear(axe, natKey){
+  return RECEPTIONS.filter(r=>r.axe===axe&&r.natKey===natKey&&r.status==='confirmed').reduce((a,r)=>a+r.ml,0);
+}
+function getObjTotal(axe, type){
+  return SECTIONS.filter(s=>s.axe===axe&&s.type===type).reduce((a,s)=>a+s.ml,0);
+}
+
+function renderAvancement(){
+  const container=document.getElementById('av-content');if(!container)return;
+  let html='';
+  let anyAxe=false;
+  AXES.forEach(axe=>{
+    const totPave=getObjTotal(axe,'pave');
+    const totBic=getObjTotal(axe,'bic');
+    if(!totPave&&!totBic)return;
+    anyAxe=true;
+    html+=`<div class="sec">${axe}</div>`;
+    if(totPave>0){
+      html+='<div class="card">';
+      html+='<div class="av-family" style="color:var(--green-d)">Voirie — structure pavés</div>';
+      ['plat_pave','gnt20_pave','gnt15_pave','sable','pave'].forEach(key=>{
+        const nat=NATURES[key];
+        const real=getConfirmedLinear(axe,key);
+        const pct=totPave>0?Math.min(100,Math.round(real/totPave*100)):0;
+        html+=`<div class="prog">
+          <div class="prog-hd"><span class="prog-name">${nat.label}</span><span class="prog-pct" style="color:${nat.color}">${pct}%</span></div>
+          <div class="prog-detail">${real.toLocaleString('fr-FR')} ml réalisés / ${totPave.toLocaleString('fr-FR')} ml prévus</div>
+          <div class="pbar-bg"><div class="pbar" style="width:${pct}%;background:${nat.color}"></div></div>
+        </div>`;
+      });
+      html+='</div>';
+    }
+    if(totBic>0){
+      html+='<div class="card">';
+      html+='<div class="av-family" style="color:var(--purple)">Zone bicouche</div>';
+      ['plat_bic','gnt20_bic','imp','mono','bic'].forEach(key=>{
+        const nat=NATURES[key];
+        const real=getConfirmedLinear(axe,key);
+        const pct=totBic>0?Math.min(100,Math.round(real/totBic*100)):0;
+        html+=`<div class="prog">
+          <div class="prog-hd"><span class="prog-name">${nat.label}</span><span class="prog-pct" style="color:${nat.color}">${pct}%</span></div>
+          <div class="prog-detail">${real.toLocaleString('fr-FR')} ml réalisés / ${totBic.toLocaleString('fr-FR')} ml prévus</div>
+          <div class="pbar-bg"><div class="pbar" style="width:${pct}%;background:${nat.color}"></div></div>
+        </div>`;
+      });
+      html+='</div>';
+    }
+    // Global
+    html+=`<div class="global-card">
+      <div class="global-title">${axe} — Avancement global</div>`;
+    if(totPave>0){
+      const rP=getConfirmedLinear(axe,'pave');const pP=Math.min(100,Math.round(rP/totPave*100));
+      html+=`<div class="global-prog"><div class="global-prog-hd"><span class="global-prog-name">Pavés</span><span class="global-prog-pct">${pP}%</span></div><div class="global-prog-sub">${rP.toLocaleString('fr-FR')} ml / ${totPave.toLocaleString('fr-FR')} ml prévus</div><div class="global-pbar-bg"><div class="global-pbar" style="width:${pP}%;background:#4FC08D"></div></div></div>`;
+    }
+    if(totBic>0){
+      const rB=getConfirmedLinear(axe,'bic');const pB=Math.min(100,Math.round(rB/totBic*100));
+      html+=`<div class="global-prog"><div class="global-prog-hd"><span class="global-prog-name">Bicouche</span><span class="global-prog-pct">${pB}%</span></div><div class="global-prog-sub">${rB.toLocaleString('fr-FR')} ml / ${totBic.toLocaleString('fr-FR')} ml prévus</div><div class="global-pbar-bg"><div class="global-pbar" style="width:${pB}%;background:#A888F0"></div></div></div>`;
+    }
+    html+='</div>';
+  });
+  if(!anyAxe) html='<div class="empty-state" style="padding:30px">Définissez des sections dans Admin → Sections pour voir l\'avancement.</div>';
+  container.innerHTML=html;
+  updatePATCumuls();
+}
+
+// ── RAPPORT (uniquement données confirmées / enregistrées) ──
+function toggleTask(el){
+  const id=el.id;
+  if(selectedTasks.has(id)){selectedTasks.delete(id);el.classList.remove('selected');el.querySelector('.rpt-check').textContent='';}
+  else{selectedTasks.add(id);el.classList.add('selected');el.querySelector('.rpt-check').textContent='✓';}
+}
+
+function genRapport(){
+  const d1=document.getElementById('rpt-d1').value;
+  const d2=document.getElementById('rpt-d2').value;
+  const axeFilt=document.getElementById('rpt-axe').value;
+  if(!d1||!d2){alert('Sélectionnez les dates.');return;}
+  const fmt=d=>{if(!d)return'—';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];};
+  const period=fmt(d1)+' – '+fmt(d2);
+
+  // Filtrer uniquement les réceptions CONFIRMÉES dans la période
+  const recs=RECEPTIONS.filter(r=>{
+    if(r.status!=='confirmed')return false;
+    if(axeFilt!=='tous'&&r.axe!==axeFilt)return false;
+    if(d1&&r.date<d1)return false;
+    if(d2&&r.date>d2)return false;
+    return true;
+  });
+
+  // Filtrer PAT dans la période
+  const pats=PAT_DATA.filter(p=>{
+    if(axeFilt!=='tous'&&p.axe!==axeFilt)return false;
+    if(d1&&p.date<d1)return false;
+    if(d2&&p.date>d2)return false;
+    return true;
+  });
+
+  let html='';
+
+  // TERRASSEMENT
+  if(selectedTasks.has('task-terr')){
+    html+=`<div class="rpt-section">
+      <div class="rpt-sh"><span class="rpt-sh-title">Terrassement — Réceptions topographiques</span><span class="rpt-sh-sub">${period}</span></div>
+      <div class="rpt-sb">`;
+    if(!recs.length){
+      html+='<div style="padding:14px;text-align:center;font-size:12px;color:var(--text3)">Aucune réception confirmée sur cette période</div>';
+    } else {
+      const totML=recs.reduce((a,r)=>a+r.ml,0);
+      html+=`<table><thead><tr><th>Date/Heure</th><th>Nature</th><th>Section PK</th><th>Dist.</th><th>Quantité</th></tr></thead><tbody>`;
+      recs.forEach(r=>{
+        const nat=NATURES[r.natKey];
+        html+=`<tr><td class="td-mono">${fmtDate(r.date).slice(0,5)} ${r.heure||''}</td><td>${r.natLabel}</td><td class="td-mono">${r.pk1str}→${r.pk2str}</td><td>${r.ml} ml</td><td>${r.qty?fmtN(r.qty)+' '+(nat?nat.unit:''):(r.ml+' ml')}</td></tr>`;
+      });
+      html+=`<tr class="tr-total"><td colspan="3">Total période</td><td>${totML.toLocaleString('fr-FR')} ml</td><td>—</td></tr>`;
+      html+='</tbody></table>';
+    }
+    html+='</div></div>';
+  }
+
+  // AVANCEMENT
+  if(selectedTasks.has('task-av')){
+    html+=`<div class="rpt-section">
+      <div class="rpt-sh"><span class="rpt-sh-title">Avancement global</span><span class="rpt-sh-sub">Au ${fmt(d2)}</span></div>
+      <div class="rpt-sb">
+      <table><thead><tr><th>Axe</th><th>Nature</th><th>Réalisé</th><th>Prévu</th><th>%</th></tr></thead><tbody>`;
+    let hasData=false;
+    AXES.filter(a=>axeFilt==='tous'||a===axeFilt).forEach(axe=>{
+      const totPave=getObjTotal(axe,'pave');
+      const totBic=getObjTotal(axe,'bic');
+      const allKeys=['plat_pave','gnt20_pave','gnt15_pave','sable','pave','plat_bic','gnt20_bic','imp','mono','bic'];
+      allKeys.forEach(key=>{
+        const nat=NATURES[key];
+        const tot=nat.family==='pave'?totPave:totBic;
+        if(!tot)return;
+        const real=getConfirmedLinear(axe,key);
+        const pct=Math.min(100,Math.round(real/tot*100));
+        html+=`<tr><td>${axe.split('–')[0].trim()}</td><td>${nat.label}</td><td>${real.toLocaleString('fr-FR')} ml</td><td>${tot.toLocaleString('fr-FR')} ml</td><td style="font-weight:700;color:${nat.color}">${pct}%</td></tr>`;
+        hasData=true;
+      });
+    });
+    if(!hasData) html+='<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:12px">Aucun objectif défini</td></tr>';
+    html+='</tbody></table></div></div>';
+  }
+
+  // POINTS À TEMPS
+  if(selectedTasks.has('task-pat')){
+    html+=`<div class="rpt-section">
+      <div class="rpt-sh"><span class="rpt-sh-title">Points à temps</span><span class="rpt-sh-sub">${period}</span></div>
+      <div class="rpt-sb">`;
+    if(!pats.length){
+      html+='<div style="padding:14px;text-align:center;font-size:12px;color:var(--text3)">Aucun point à temps sur cette période</div>';
+    } else {
+      const tN=pats.reduce((a,p)=>a+(p.ndp||0),0);
+      const tE=pats.reduce((a,p)=>a+(p.epauf||0),0);
+      const tD=pats.reduce((a,p)=>a+(p.defl||0),0);
+      html+=`<table><thead><tr><th>Date/Heure</th><th>Zone</th><th>Nids (m²)</th><th>Épauf. (m²)</th><th>Défl. (m²)</th></tr></thead><tbody>`;
+      pats.forEach(p=>{html+=`<tr class="tr-pat"><td class="td-mono">${fmtDate(p.date).slice(0,5)} ${p.heure||''}</td><td>${p.zone||'—'}</td><td>${fmtN(p.ndp)}</td><td>${fmtN(p.epauf)}</td><td>${fmtN(p.defl)}</td></tr>`;});
+      html+=`<tr class="tr-total"><td colspan="2">Total</td><td>${fmtN(tN)} m²</td><td>${fmtN(tE)} m²</td><td>${fmtN(tD)} m²</td></tr>`;
+      html+='</tbody></table>';
+    }
+    html+='</div></div>';
+  }
+
+  // CUMULS PAR PK
+  if(selectedTasks.has('task-cumul')){
+    const allConfirmed=RECEPTIONS.filter(r=>r.status==='confirmed'&&(axeFilt==='tous'||r.axe===axeFilt)).sort((a,b)=>a.pk1m-b.pk1m);
+    html+=`<div class="rpt-section">
+      <div class="rpt-sh"><span class="rpt-sh-title">Cumuls par PK</span><span class="rpt-sh-sub">Depuis le début</span></div>
+      <div class="rpt-sb">`;
+    if(!allConfirmed.length){
+      html+='<div style="padding:14px;text-align:center;font-size:12px;color:var(--text3)">Aucune réception confirmée</div>';
+    } else {
+      let cumML=0;
+      html+=`<table><thead><tr><th>Section PK</th><th>Nature</th><th>Dist.</th><th>Quantité</th><th>Cumul ml</th></tr></thead><tbody>`;
+      allConfirmed.forEach(r=>{
+        const nat=NATURES[r.natKey];
+        cumML+=r.ml;
+        html+=`<tr><td class="td-mono">${r.pk1str}→${r.pk2str}</td><td>${r.natLabel}</td><td>${r.ml} ml</td><td>${r.qty?fmtN(r.qty)+' '+(nat?nat.unit:''):r.ml+' ml'}</td><td style="font-family:var(--mono)">${cumML.toLocaleString('fr-FR')}</td></tr>`;
+      });
+      html+=`<tr class="tr-total"><td colspan="2">Total</td><td>${allConfirmed.reduce((a,r)=>a+r.ml,0).toLocaleString('fr-FR')} ml</td><td colspan="2">—</td></tr>`;
+      html+='</tbody></table>';
+    }
+    html+='</div></div>';
+  }
+
+  if(!html) html='<div class="empty-state">Sélectionnez au moins une tâche.</div>';
+  document.getElementById('rpt-content').innerHTML=html;
+  document.getElementById('rpt-preview').style.display='block';
+  setTimeout(()=>document.getElementById('rpt-preview').scrollIntoView({behavior:'smooth'}),150);
+}
+
+// ── EXPORT ──
+function exportPDF(){
+  const win=window.open('','_blank');
+  const content=document.getElementById('rpt-content').innerHTML;
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>TopoCT Rapport</title>
+  <style>body{font-family:Arial,sans-serif;font-size:11px;margin:20px;color:#111}
+  .rpt-sh{background:#17160F;color:#fff;padding:8px 12px;border-radius:4px 4px 0 0;display:flex;justify-content:space-between;margin-top:16px}
+  .rpt-sh-title{font-size:12px;font-weight:600}.rpt-sh-sub{font-size:10px;color:rgba(255,255,255,.6)}
+  .rpt-sb{border:1px solid #D4D1C8;border-top:none;border-radius:0 0 4px 4px}
+  table{width:100%;border-collapse:collapse}th{padding:6px 7px;background:#E8E6DF;font-size:10px;font-weight:600;text-align:left;border-bottom:1px solid #D4D1C8}
+  td{padding:6px 7px;border-bottom:1px solid #E4E2DB;font-size:11px}.tr-total td{background:#E8E6DF;font-weight:700}
+  .tr-pat td{background:#FBF0E2}.td-mono{font-family:monospace;font-size:10px}
+  @media print{@page{margin:15mm}}</style></head><body>
+  <h2 style="margin-bottom:4px">TopoCT — Rapport</h2>
+  <p style="color:#666;font-size:11px;margin-bottom:20px">Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</p>
+  ${content}</body></html>`);
+  win.document.close();win.focus();setTimeout(()=>win.print(),600);
+}
+
+function exportExcel(){
+  const SEP='\t',NL='\r\n';
+  const d1=document.getElementById('rpt-d1').value;
+  const d2=document.getElementById('rpt-d2').value;
+  const axeFilt=document.getElementById('rpt-axe').value;
+  const fmt=d=>{if(!d)return'';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];};
+  let out='TopoCT — Rapport'+NL+'Période'+SEP+fmt(d1)+' – '+fmt(d2)+NL+'Généré le'+SEP+new Date().toLocaleDateString('fr-FR')+NL+NL;
+  const recs=RECEPTIONS.filter(r=>{
+    if(r.status!=='confirmed')return false;
+    if(axeFilt!=='tous'&&r.axe!==axeFilt)return false;
+    if(d1&&r.date<d1)return false;
+    if(d2&&r.date>d2)return false;
+    return true;
+  });
+  if(selectedTasks.has('task-terr')){
+    out+='RÉCEPTIONS TOPOGRAPHIQUES'+NL;
+    out+=['Date','Heure','Axe','Nature','PK début','PK fin','Linéaire (ml)','Quantité','Unité'].join(SEP)+NL;
+    recs.forEach(r=>{const nat=NATURES[r.natKey];out+=[fmt(r.date),r.heure||'',r.axe,r.natLabel,r.pk1str,r.pk2str,r.ml,r.qty?fmtN(r.qty):r.ml,r.qty&&nat?nat.unit:'ml'].join(SEP)+NL;});
+    out+=['TOTAL','','','','','',recs.reduce((a,r)=>a+r.ml,0),'',''].join(SEP)+NL+NL;
+  }
+  if(selectedTasks.has('task-av')){
+    out+='AVANCEMENT GLOBAL'+NL;
+    out+=['Axe','Nature','Réalisé (ml)','Prévu (ml)','Avancement (%)'].join(SEP)+NL;
+    AXES.filter(a=>axeFilt==='tous'||a===axeFilt).forEach(axe=>{
+      const totPave=getObjTotal(axe,'pave'),totBic=getObjTotal(axe,'bic');
+      ['plat_pave','gnt20_pave','gnt15_pave','sable','pave'].forEach(key=>{if(!totPave)return;const nat=NATURES[key];const real=getConfirmedLinear(axe,key);out+=[axe,nat.label,real,totPave,Math.min(100,Math.round(real/totPave*100))].join(SEP)+NL;});
+      ['plat_bic','gnt20_bic','imp','mono','bic'].forEach(key=>{if(!totBic)return;const nat=NATURES[key];const real=getConfirmedLinear(axe,key);out+=[axe,nat.label,real,totBic,Math.min(100,Math.round(real/totBic*100))].join(SEP)+NL;});
+    });
+    out+=NL;
+  }
+  if(selectedTasks.has('task-pat')){
+    const pats=PAT_DATA.filter(p=>{if(axeFilt!=='tous'&&p.axe!==axeFilt)return false;if(d1&&p.date<d1)return false;if(d2&&p.date>d2)return false;return true;});
+    out+='POINTS À TEMPS'+NL;
+    out+=['Date','Heure','Axe','Zone','Nids de poule (m²)','Épaufrures (m²)','Déflachage (m²)'].join(SEP)+NL;
+    pats.forEach(p=>{out+=[fmt(p.date),p.heure||'',p.axe,p.zone||'',fmtN(p.ndp),fmtN(p.epauf),fmtN(p.defl)].join(SEP)+NL;});
+    if(pats.length){const tN=pats.reduce((a,p)=>a+(p.ndp||0),0),tE=pats.reduce((a,p)=>a+(p.epauf||0),0),tD=pats.reduce((a,p)=>a+(p.defl||0),0);out+=['TOTAL','','','',fmtN(tN),fmtN(tE),fmtN(tD)].join(SEP)+NL;}
+    out+=NL;
+  }
+  const blob=new Blob(['\uFEFF'+out],{type:'text/tab-separated-values;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='TopoCT_'+new Date().toISOString().slice(0,10)+'.xls';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+// ── SÉCURITÉ ADMIN ──
+function requestAdmin(){
+  if(IS_ADMIN){exitAdmin();return;}
+  if(ADMIN_DEVICE&&ADMIN_DEVICE!==DEVICE_ID){showOverlayMsg('Accès refusé','Cet appareil n\'est pas l\'appareil administrateur.','error');return;}
+  if(!ADMIN_PWD)showFirstLogin();else showPinEntry();
+}
+function showFirstLogin(){
+  document.getElementById('overlay-content').innerHTML=`<div class="overlay-title">Première connexion admin</div><div class="overlay-sub">Code temporaire — changez-le immédiatement.</div><div class="overlay-code">${FIRST_PWD}</div><div class="f"><label>Nouveau mot de passe</label><input type="password" id="new-pwd1" placeholder="••••" inputmode="numeric" maxlength="8"></div><div class="f"><label>Confirmer</label><input type="password" id="new-pwd2" placeholder="••••" inputmode="numeric" maxlength="8"></div><div class="overlay-err" id="overlay-err"></div><button class="btn btn-green" style="margin-top:12px" onclick="setFirstPwd()">Confirmer</button><button class="btn-sm" style="margin-top:8px;width:100%" onclick="closeOverlay()">Annuler</button>`;
+  document.getElementById('admin-overlay').style.display='flex';
+}
+function setFirstPwd(){
+  const p1=document.getElementById('new-pwd1').value,p2=document.getElementById('new-pwd2').value,err=document.getElementById('overlay-err');
+  if(p1.length<4){err.textContent='Minimum 4 caractères.';err.style.display='block';return;}
+  if(p1!==p2){err.textContent='Ne correspondent pas.';err.style.display='block';return;}
+  ADMIN_PWD=p1;LS.set('admin_pwd',ADMIN_PWD);ADMIN_DEVICE=DEVICE_ID;LS.set('admin_device',ADMIN_DEVICE);
+  closeOverlay();enterAdmin();
+}
+function showPinEntry(){
+  document.getElementById('overlay-content').innerHTML=`<div class="overlay-title">Accès administrateur</div><div class="overlay-sub">Entrez votre mot de passe.</div><div class="f"><input type="password" id="pwd-inp" placeholder="Mot de passe" inputmode="numeric" style="font-size:18px;text-align:center;letter-spacing:4px;font-family:var(--mono)" onkeydown="if(event.key==='Enter')checkPwd()"></div><div class="overlay-err" id="overlay-err"></div><button class="btn btn-blue" style="margin-top:12px" onclick="checkPwd()">Connexion</button><button class="btn-sm" style="margin-top:8px;width:100%" onclick="closeOverlay()">Annuler</button>`;
+  document.getElementById('admin-overlay').style.display='flex';
+  setTimeout(()=>{const el=document.getElementById('pwd-inp');if(el)el.focus();},100);
+}
+function checkPwd(){
+  const v=document.getElementById('pwd-inp').value;
+  if(v===ADMIN_PWD){closeOverlay();enterAdmin();}
+  else{const err=document.getElementById('overlay-err');err.textContent='Mot de passe incorrect.';err.style.display='block';document.getElementById('pwd-inp').value='';}
+}
+function showOverlayMsg(title,msg,type){
+  document.getElementById('overlay-content').innerHTML=`<div class="overlay-title">${title}</div><div style="font-size:13px;color:${type==='error'?'var(--red)':'var(--green)'};margin-bottom:16px;line-height:1.5">${msg}</div><button class="btn-sm" style="width:100%" onclick="closeOverlay()">Fermer</button>`;
+  document.getElementById('admin-overlay').style.display='flex';
+}
+function closeOverlay(){document.getElementById('admin-overlay').style.display='none';}
+function enterAdmin(){
+  IS_ADMIN=true;
+  document.getElementById('role-btn').textContent='Admin ✓';
+  document.getElementById('role-btn').className='role-pill r-admin';
+  document.getElementById('stab-admin').style.display='block';
+  saisieTab('admin',document.getElementById('stab-admin'));
+  renderAdminRecs();
+}
+function exitAdmin(){
+  IS_ADMIN=false;
+  document.getElementById('role-btn').textContent='Admin';
+  document.getElementById('role-btn').className='role-pill r-topo';
+  document.getElementById('stab-admin').style.display='none';
+  saisieTab('topo',document.querySelector('.stab'));
+}
+
+// ── TABS ──
+function saisieTab(tab,btn){
+  document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  ['topo','pat','admin'].forEach(t=>document.getElementById('vue-'+t).style.display=t===tab?'block':'none');
+}
+function adminTab(tab,btn){
+  document.querySelectorAll('.rs-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  ['recep','pat','axes','obj','bib'].forEach(t=>document.getElementById('adm-'+t).style.display=t===tab?'block':'none');
+  if(tab==='recep')renderAdminRecs();
+  if(tab==='pat'){renderPATHistory();updatePATCumuls();}
+  if(tab==='bib')renderBibList();
+}
+function goPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById('p-'+id).classList.add('active');
+  document.querySelectorAll('.ni').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  document.getElementById('scroll-area').scrollTop=0;
+}
+
+// ── OFFLINE ──
+function updateNetworkStatus(){
+  document.getElementById('offline-bar').classList.toggle('show',!navigator.onLine);
+}
+window.addEventListener('online',updateNetworkStatus);
+window.addEventListener('offline',updateNetworkStatus);
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+
+// ── INIT ──
+(function(){
+  const today=new Date().toISOString().split('T')[0];
+  ['t-date','pat-date','adm-pat-date','rpt-d1','rpt-d2'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=today;});
+  populateAxeSelects();renderSections();renderAvancement();
+  renderPendingRecs();renderPATHistory();updatePATCumuls();
+  renderBibList();updatePendingBadge();updateNetworkStatus();
+})();
+</script>
+</body>
+</html>

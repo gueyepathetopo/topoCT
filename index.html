@@ -11,6 +11,161 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
 <title>TopoCT</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+// ══ SUPABASE CONFIG ══
+const SUPA_URL = 'https://xskfkiuzyddcdfrkzomo.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhza2ZraXV6eWRkY2Rmcmt6b21vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0ODg0MDAsImV4cCI6MjA5NDA2NDQwMH0.k6S0Q3VlrnTzNPRvPecKwr6Kn_i-g5MYKJfTXHJ4zOU';
+const _sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+const USE_DB = true; // true = Supabase, false = localStorage uniquement
+
+// ══ COUCHE BASE DE DONNÉES ══
+const DB = {
+
+  // AXES
+  async loadAxes() {
+    if(!USE_DB) return;
+    const {data,error} = await _sb.from('axes').select('nom').order('created_at');
+    if(data && !error) {
+      AXES = data.map(r=>r.nom);
+      if(!AXES.length) AXES = ['Ziguinchor – Cap Skirring','Oussouye – Mlomp'];
+      LS.set('axes', AXES);
+      populateAxeSelects();
+    }
+  },
+  async saveAxe(nom) {
+    if(!USE_DB) return;
+    await _sb.from('axes').insert({nom});
+  },
+  async deleteAxe(nom) {
+    if(!USE_DB) return;
+    await _sb.from('axes').delete().eq('nom', nom);
+  },
+
+  // SECTIONS
+  async loadSections() {
+    if(!USE_DB) return;
+    const {data,error} = await _sb.from('sections_objectifs').select('*').order('created_at');
+    if(data && !error) {
+      SECTIONS = data.map(r=>({
+        id: r.id, axe: r.axe, type: r.type_travaux,
+        ml: r.ml, pk1: r.pk1||'', pk2: r.pk2||'',
+        pk1m: r.pk1 ? parsePK(r.pk1) : null,
+        pk2m: r.pk2 ? parsePK(r.pk2) : null
+      }));
+      LS.set('sections', SECTIONS);
+      renderSections(); renderAvancement(); checkNoSections();
+    }
+  },
+  async saveSection(s) {
+    if(!USE_DB) return;
+    const {data} = await _sb.from('sections_objectifs')
+      .insert({axe:s.axe, type_travaux:s.type, ml:s.ml, pk1:s.pk1||null, pk2:s.pk2||null})
+      .select();
+    if(data && data[0]) {
+      const idx = SECTIONS.findIndex(x=>x.id===s.id);
+      if(idx>=0) SECTIONS[idx].id = data[0].id;
+      LS.set('sections', SECTIONS);
+    }
+  },
+  async deleteSection(id) {
+    if(!USE_DB) return;
+    if(typeof id === 'number') return; // ID local uniquement
+    await _sb.from('sections_objectifs').delete().eq('id', id);
+  },
+
+  // RÉCEPTIONS
+  async loadReceptions() {
+    if(!USE_DB) return;
+    const {data,error} = await _sb.from('receptions').select('*').order('date_trav');
+    if(data && !error) {
+      RECEPTIONS = data.map(r=>({
+        id: r.id, axe: r.axe, natKey: r.nat_key,
+        natLabel: r.nat_label, pk1m: r.pk1_m, pk2m: r.pk2_m,
+        pk1str: r.pk1_str||fmtPK(r.pk1_m), pk2str: r.pk2_str||fmtPK(r.pk2_m),
+        ml: r.ml, date: r.date_trav, heure: r.heure||'',
+        status: r.validated ? 'confirmed' : 'pending',
+        qty: r.qty, createdBy: r.created_by||'topo'
+      }));
+      LS.set('receptions', RECEPTIONS);
+      renderPendingRecs(); renderAdminRecs(); renderAvancement(); updatePendingBadge();
+    }
+  },
+  async saveReception(r) {
+    if(!USE_DB) return;
+    const {data} = await _sb.from('receptions').insert({
+      axe: r.axe, nat_key: r.natKey, nat_label: r.natLabel,
+      pk1_m: r.pk1m, pk2_m: r.pk2m,
+      pk1_str: r.pk1str, pk2_str: r.pk2str,
+      ml: r.ml, date_trav: r.date, heure: r.heure||'',
+      validated: false, created_by: r.createdBy||'topo'
+    }).select();
+    if(data && data[0]) {
+      const idx = RECEPTIONS.findIndex(x=>x.id===r.id);
+      if(idx>=0) RECEPTIONS[idx].id = data[0].id;
+      LS.set('receptions', RECEPTIONS);
+    }
+  },
+  async confirmReception(id, qty) {
+    if(!USE_DB) return;
+    await _sb.from('receptions').update({validated:true, qty:qty||null}).eq('id', id);
+  },
+  async updateReception(id, fields) {
+    if(!USE_DB) return;
+    await _sb.from('receptions').update({
+      date_trav: fields.date, heure: fields.heure,
+      pk1_m: fields.pk1m, pk2_m: fields.pk2m,
+      pk1_str: fields.pk1str, pk2_str: fields.pk2str,
+      ml: fields.ml
+    }).eq('id', id);
+  },
+  async deleteReception(id) {
+    if(!USE_DB) return;
+    if(typeof id === 'number') return;
+    await _sb.from('receptions').delete().eq('id', id);
+  },
+
+  // POINTS À TEMPS
+  async loadPAT() {
+    if(!USE_DB) return;
+    const {data,error} = await _sb.from('points_temps').select('*').order('date_trav', {ascending:false});
+    if(data && !error) {
+      PAT_DATA = data.map(p=>({
+        id: p.id, axe: p.axe, date: p.date_trav,
+        heure: p.heure||'', zone: p.zone||'',
+        ndp: p.ndp||0, epauf: p.epauf||0, defl: p.defl||0
+      }));
+      LS.set('pat_data', PAT_DATA);
+      renderPATHistory(); updatePATCumuls();
+    }
+  },
+  async savePAT(p) {
+    if(!USE_DB) return;
+    const {data} = await _sb.from('points_temps').insert({
+      axe: p.axe, date_trav: p.date, heure: p.heure||'',
+      zone: p.zone||'', ndp: p.ndp||0, epauf: p.epauf||0, defl: p.defl||0
+    }).select();
+    if(data && data[0]) {
+      const idx = PAT_DATA.findIndex(x=>x.id===p.id);
+      if(idx>=0) PAT_DATA[idx].id = data[0].id;
+      LS.set('pat_data', PAT_DATA);
+    }
+  },
+  async updatePAT(id, p) {
+    if(!USE_DB) return;
+    await _sb.from('points_temps').update({
+      zone: p.zone, date_trav: p.date, heure: p.heure||'',
+      ndp: p.ndp||0, epauf: p.epauf||0, defl: p.defl||0
+    }).eq('id', id);
+  },
+  async deletePAT(id) {
+    if(!USE_DB) return;
+    if(typeof id === 'number') return;
+    await _sb.from('points_temps').delete().eq('id', id);
+  }
+};
+</script>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
 :root{
@@ -649,10 +804,13 @@ function addAxe(){
   AXES.push(v);LS.set('axes',AXES);
   document.getElementById('new-axe-nom').value='';
   populateAxeSelects();
+  DB.saveAxe(v);
 }
 function delAxe(i){
   if(!confirm('Supprimer cet axe ?'))return;
+  const nom=AXES[i];
   AXES.splice(i,1);LS.set('axes',AXES);populateAxeSelects();
+  DB.deleteAxe(nom);
 }
 function checkNoSections(){
   const axe=document.getElementById('t-axe').value;
@@ -682,11 +840,13 @@ function addObjSection(){
     if(p1!==null&&p2!==null&&p2>p1){ml=p2-p1;pk1str=document.getElementById('obj-pk1').value;pk2str=document.getElementById('obj-pk2').value;pk1m=p1;pk2m=p2;}
   } else {ml=parseFloat(document.getElementById('obj-ml').value)||0;}
   if(!ml)return;
-  SECTIONS.push({axe,type,ml,pk1:pk1str,pk2:pk2str,pk1m,pk2m,id:Date.now()});
+  const sec={axe,type,ml,pk1:pk1str,pk2:pk2str,pk1m,pk2m,id:Date.now()};
+  SECTIONS.push(sec);
   LS.set('sections',SECTIONS);
   const ok=document.getElementById('save-obj');ok.style.display='block';
   setTimeout(()=>ok.style.display='none',3000);
   renderSections();renderAvancement();checkNoSections();
+  DB.saveSection(sec);
 }
 function renderSections(){
   const c=document.getElementById('sections-list');if(!c)return;
@@ -744,6 +904,7 @@ function saveRec(){
   const ok=document.getElementById('save-ok-topo');ok.style.display='block';
   setTimeout(()=>ok.style.display='none',3000);
   renderPendingRecs();renderAdminRecs();renderAvancement();
+  DB.saveReception(rec);
 }
 
 // ── AFFICHAGE RÉCEPTIONS EN ATTENTE (vue topographe) ──
@@ -848,6 +1009,7 @@ function confirmRec(id){
   RECEPTIONS[i]={...r,status:'confirmed',qty,confirmedAt:new Date().toISOString()};
   LS.set('receptions',RECEPTIONS);
   updatePendingBadge();renderPendingRecs();renderAdminRecs();renderAvancement();
+  DB.confirmReception(r.id, qty);
 }
 
 function editRec(id){
@@ -899,6 +1061,7 @@ function saveEditRec(id){
 
 function deleteRec(id){
   if(!confirm('Supprimer cette réception ?'))return;
+  DB.deleteReception(id);
   RECEPTIONS=RECEPTIONS.filter(r=>r.id!==id);
   LS.set('receptions',RECEPTIONS);
   updatePendingBadge();renderPendingRecs();renderAdminRecs();renderAvancement();
@@ -933,6 +1096,7 @@ function saveAdmPAT(){
   const ok=document.getElementById('save-adm-pat');ok.style.display='block';
   setTimeout(()=>ok.style.display='none',3000);
   renderPATHistory();updatePATCumuls();
+  DB.savePAT(entry);
 }
 function renderPATHistory(){
   const c=document.getElementById('pat-history-list');if(!c)return;
@@ -960,6 +1124,8 @@ function renderPATHistory(){
 }
 function delPAT(i){
   if(!confirm('Supprimer ?'))return;
+  const entry=PAT_DATA[i];
+  DB.deletePAT(entry.id);
   PAT_DATA.splice(i,1);LS.set('pat_data',PAT_DATA);
   renderPATHistory();updatePATCumuls();
 }
@@ -993,7 +1159,9 @@ function saveEditPAT(i){
     epauf:parseFloat(document.getElementById('e-epauf').value)||0,
     defl:parseFloat(document.getElementById('e-defl').value)||0
   };
-  LS.set('pat_data',PAT_DATA);closeOverlay();renderPATHistory();updatePATCumuls();
+  LS.set('pat_data',PAT_DATA);
+  DB.updatePAT(PAT_DATA[i].id, PAT_DATA[i]);
+  closeOverlay();renderPATHistory();updatePATCumuls();
 }
 function updatePATCumuls(){
   const tN=PAT_DATA.reduce((a,p)=>a+(p.ndp||0),0);
@@ -1401,6 +1569,13 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catc
   populateAxeSelects();renderSections();renderAvancement();
   renderPendingRecs();renderPATHistory();updatePATCumuls();
   renderBibList();updatePendingBadge();updateNetworkStatus();
+  // Charger les données depuis Supabase
+  if(USE_DB){
+    DB.loadAxes();
+    DB.loadSections();
+    DB.loadReceptions();
+    DB.loadPAT();
+  }
 })();
 </script>
 </body>

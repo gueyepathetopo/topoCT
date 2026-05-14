@@ -28,8 +28,8 @@ const DB = {
   // ── AXES ──
   async loadAxes() {
     const {data,error} = await _sb.from('axes').select('nom').order('created_at');
-    if(data && !error){
-      AXES = data.map(r=>r.nom);
+    if(!error){
+      AXES = data ? data.map(r=>r.nom) : [];
       if(!AXES.length) AXES = ['Ziguinchor – Cap Skirring','Oussouye – Mlomp'];
       LS.set('axes',AXES);
       populateAxeSelects();
@@ -47,8 +47,9 @@ const DB = {
   // ── SECTIONS ──
   async loadSections() {
     const {data,error} = await _sb.from('sections_objectifs').select('*').order('created_at');
-    if(data && !error){
-      SECTIONS = data.map(r=>({
+    if(!error){
+      // Toujours écraser avec les données Supabase (y compris si vide)
+      SECTIONS = (data||[]).map(r=>({
         id:r.id, axe:r.axe, type:r.type_travaux,
         ml:r.ml, pk1:r.pk1||'', pk2:r.pk2||'',
         pk1m:r.pk1?parsePK(r.pk1):null,
@@ -71,8 +72,9 @@ const DB = {
   // ── RÉCEPTIONS ──
   async loadReceptions() {
     const {data,error} = await _sb.from('receptions').select('*').order('date_trav');
-    if(data && !error){
-      RECEPTIONS = data.map(r=>({
+    if(!error){
+      // Toujours écraser avec Supabase
+      RECEPTIONS = (data||[]).map(r=>({
         id:r.id, axe:r.axe, natKey:r.nat_key,
         natLabel:r.nat_label,
         pk1m:r.pk1_m, pk2m:r.pk2_m,
@@ -120,8 +122,9 @@ const DB = {
   // ── POINTS À TEMPS ──
   async loadPAT() {
     const {data,error} = await _sb.from('points_temps').select('*').order('date_trav',{ascending:false});
-    if(data && !error){
-      PAT_DATA = data.map(p=>({
+    if(!error){
+      // Toujours écraser avec Supabase
+      PAT_DATA = (data||[]).map(p=>({
         id:p.id, axe:p.axe, date:p.date_trav,
         heure:p.heure||'', zone:p.zone||'',
         ndp:p.ndp||0, epauf:p.epauf||0, defl:p.defl||0
@@ -737,11 +740,11 @@ const LS={
 };
 
 // ── STATE ──
-let AXES=LS.get('axes')||['Ziguinchor – Cap Skirring','Oussouye – Mlomp'];
-let SECTIONS=LS.get('sections')||[];
-// Réceptions : status = 'pending' | 'confirmed'
-let RECEPTIONS=LS.get('receptions')||[];
-let PAT_DATA=LS.get('pat_data')||[];
+// Données toujours chargées depuis Supabase — localStorage = cache temporaire seulement
+let AXES=[];
+let SECTIONS=[];
+let RECEPTIONS=[];
+let PAT_DATA=[];
 let BIB_DATA=LS.get('bib_data')||[];
 let ADMIN_PWD=LS.get('admin_pwd')||null;
 let ADMIN_DEVICE=LS.get('admin_device')||null;

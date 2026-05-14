@@ -87,15 +87,15 @@ const DB = {
     }
   },
   async saveReception(r) {
-    const {error} = await _sb.from('receptions').insert({
+    const {data,error} = await _sb.from('receptions').insert({
       axe:r.axe, nat_key:r.natKey, nat_label:r.natLabel,
       pk1_m:r.pk1m, pk2_m:r.pk2m,
       pk1_str:r.pk1str, pk2_str:r.pk2str,
       ml:r.ml, date_trav:r.date, heure:r.heure||'',
       validated:false, created_by:r.createdBy||'topo'
-    });
-    if(!error) await DB.loadReceptions();
-    else alert('Erreur sauvegarde réception : '+JSON.stringify(error));
+    }).select();
+    if(!error){ await DB.loadReceptions(); }
+    else alert('Erreur sauvegarde réception : '+error.message);
   },
   async confirmReception(id, qty) {
     const {error} = await _sb.from('receptions')
@@ -914,10 +914,11 @@ function renderSections(){
   tc.innerHTML=(totPave?`<div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--green-l);border-radius:var(--rs);margin-bottom:6px;font-size:12px"><span style="color:var(--green-d);font-weight:500">Total voirie pavés</span><span style="font-family:var(--mono);font-weight:700;color:var(--green)">${totPave.toLocaleString('fr-FR')} ml</span></div>`:'')+
     (totBic?`<div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--purple-l);border-radius:var(--rs);font-size:12px"><span style="color:var(--purple);font-weight:500">Total zone bicouche</span><span style="font-family:var(--mono);font-weight:700;color:var(--purple)">${totBic.toLocaleString('fr-FR')} ml</span></div>`:'');
 }
-function delSection(i){
+async function delSection(i){
   if(!confirm('Supprimer cette section ?'))return;
-  SECTIONS.splice(i,1);LS.set('sections',SECTIONS);
-  renderSections();renderAvancement();checkNoSections();
+  const sec=SECTIONS[i];
+  await DB.deleteSection(sec.id);
+  // DB.loadSections() appelé dans deleteSection
 }
 
 // ── SAVE RÉCEPTION ──
@@ -934,18 +935,15 @@ async function saveRec(){
   if(!check.ok){alert('⛔ '+check.msg);return;}
   const ml=p2-p1;
   const rec={
-    id:Date.now(),axe,natKey:selectedNatKey,
+    axe,natKey:selectedNatKey,
     natLabel:NATURES[selectedNatKey].label,
     pk1m:p1,pk2m:p2,pk1str:document.getElementById('pk1').value,
     pk2str:document.getElementById('pk2').value,
     ml,date,heure,status:'pending',qty:null,
     createdBy:IS_ADMIN?'admin':'topo'
   };
-  RECEPTIONS.push(rec);LS.set('receptions',RECEPTIONS);
-  updatePendingBadge();
   const ok=document.getElementById('save-ok-topo');ok.style.display='block';
   setTimeout(()=>ok.style.display='none',3000);
-  renderPendingRecs();renderAdminRecs();renderAvancement();
   await DB.saveReception(rec);
 }
 
@@ -968,8 +966,8 @@ function renderPendingRecs(){
         <span class="badge b-pend">En attente</span>
       </div>
       <div class="rec-actions">
-        <button class="btn-sm" onclick="editRec(${r.id})">Modifier</button>
-        <button class="btn-sm danger" onclick="deleteRec(${r.id})">Supprimer</button>
+        <button class="btn-sm" onclick="editRec('${r.id}')">Modifier</button>
+        <button class="btn-sm danger" onclick="deleteRec('${r.id}')">Supprimer</button>
       </div>
     </div>`;
   }).join('');
@@ -1002,14 +1000,14 @@ function renderAdminRecs(){
         <div class="prof-cfg" style="margin-top:8px">
           <label>Volume total (m³) — depuis projet d'exécution</label>
           <div class="prof-cfg-row">
-            <input type="number" id="vol-${r.id}" step="0.01" placeholder="ex: 320.50">
+            <input type="number" id="vol-${r.id}" data-uuid="${r.id}" step="0.01" placeholder="ex: 320.50">
             <span style="font-size:12px;color:var(--text3)">m³</span>
           </div>
         </div>`:''}
         <div class="rec-actions">
-          <button class="btn-sm" onclick="editRec(${r.id})">Modifier</button>
-          <button class="btn-sm danger" onclick="deleteRec(${r.id})">Supprimer</button>
-          <button class="btn-sm success" onclick="confirmRec(${r.id})">✓ Confirmer</button>
+          <button class="btn-sm" onclick="editRec('${r.id}')">Modifier</button>
+          <button class="btn-sm danger" onclick="deleteRec('${r.id}')">Supprimer</button>
+          <button class="btn-sm success" onclick="confirmRec('${r.id}')">✓ Confirmer</button>
         </div>
       </div>`;
     }).join('');
@@ -1031,8 +1029,8 @@ function renderAdminRecs(){
           <span class="badge b-ok">Confirmé</span>
         </div>
         <div class="rec-actions">
-          <button class="btn-sm" onclick="editRec(${r.id})">Modifier</button>
-          <button class="btn-sm danger" onclick="deleteRec(${r.id})">Supprimer</button>
+          <button class="btn-sm" onclick="editRec('${r.id}')">Modifier</button>
+          <button class="btn-sm danger" onclick="deleteRec('${r.id}')">Supprimer</button>
         </div>
       </div>`;
     }).join('');
@@ -1048,10 +1046,9 @@ async function confirmRec(id){
     const volEl=document.getElementById('vol-'+id);
     if(volEl) qty=parseFloat(volEl.value)||null;
   }
-  RECEPTIONS[i]={...r,status:'confirmed',qty,confirmedAt:new Date().toISOString()};
-  LS.set('receptions',RECEPTIONS);
-  updatePendingBadge();
+  // Utiliser directement l'UUID Supabase stocké dans r.id
   await DB.confirmReception(r.id, qty);
+  // DB.loadReceptions() est appelé dans confirmReception → met à jour l'affichage
 }
 
 function editRec(id){
@@ -1104,9 +1101,7 @@ async function saveEditRec(id){
 async function deleteRec(id){
   if(!confirm('Supprimer cette réception ?'))return;
   await DB.deleteReception(id);
-  RECEPTIONS=RECEPTIONS.filter(r=>r.id!==id);
-  LS.set('receptions',RECEPTIONS);
-  updatePendingBadge();renderPendingRecs();renderAdminRecs();renderAvancement();
+  // DB.loadReceptions() appelé dans deleteReception → met à jour l'affichage
 }
 
 function updatePendingBadge(){
@@ -1168,8 +1163,7 @@ async function delPAT(i){
   if(!confirm('Supprimer ?'))return;
   const entry=PAT_DATA[i];
   await DB.deletePAT(entry.id);
-  PAT_DATA.splice(i,1);LS.set('pat_data',PAT_DATA);
-  renderPATHistory();updatePATCumuls();
+  // DB.loadPAT() appelé dans deletePAT
 }
 function editPAT(i){
   const p=PAT_DATA[i];

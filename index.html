@@ -19,152 +19,194 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const _sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 const USE_DB = true; // true = Supabase, false = localStorage uniquement
 
-// ══ COUCHE BASE DE DONNÉES ══
+// ══ COUCHE BASE DE DONNÉES SUPABASE ══
+// Toutes les opérations vont directement dans Supabase
+// et rechargent immédiatement pour synchroniser tous les appareils
+
 const DB = {
 
-  // AXES
+  // ── AXES ──
   async loadAxes() {
-    if(!USE_DB) return;
     const {data,error} = await _sb.from('axes').select('nom').order('created_at');
-    if(data && !error) {
+    if(data && !error){
       AXES = data.map(r=>r.nom);
       if(!AXES.length) AXES = ['Ziguinchor – Cap Skirring','Oussouye – Mlomp'];
-      LS.set('axes', AXES);
+      LS.set('axes',AXES);
       populateAxeSelects();
     }
   },
   async saveAxe(nom) {
-    if(!USE_DB) return;
-    await _sb.from('axes').insert({nom});
+    const {error} = await _sb.from('axes').insert({nom});
+    if(!error) await DB.loadAxes();
   },
   async deleteAxe(nom) {
-    if(!USE_DB) return;
-    await _sb.from('axes').delete().eq('nom', nom);
+    const {error} = await _sb.from('axes').delete().eq('nom',nom);
+    if(!error) await DB.loadAxes();
   },
 
-  // SECTIONS
+  // ── SECTIONS ──
   async loadSections() {
-    if(!USE_DB) return;
     const {data,error} = await _sb.from('sections_objectifs').select('*').order('created_at');
-    if(data && !error) {
+    if(data && !error){
       SECTIONS = data.map(r=>({
-        id: r.id, axe: r.axe, type: r.type_travaux,
-        ml: r.ml, pk1: r.pk1||'', pk2: r.pk2||'',
-        pk1m: r.pk1 ? parsePK(r.pk1) : null,
-        pk2m: r.pk2 ? parsePK(r.pk2) : null
+        id:r.id, axe:r.axe, type:r.type_travaux,
+        ml:r.ml, pk1:r.pk1||'', pk2:r.pk2||'',
+        pk1m:r.pk1?parsePK(r.pk1):null,
+        pk2m:r.pk2?parsePK(r.pk2):null
       }));
-      LS.set('sections', SECTIONS);
+      LS.set('sections',SECTIONS);
       renderSections(); renderAvancement(); checkNoSections();
     }
   },
   async saveSection(s) {
-    if(!USE_DB) return;
-    const {data} = await _sb.from('sections_objectifs')
-      .insert({axe:s.axe, type_travaux:s.type, ml:s.ml, pk1:s.pk1||null, pk2:s.pk2||null})
-      .select();
-    if(data && data[0]) {
-      const idx = SECTIONS.findIndex(x=>x.id===s.id);
-      if(idx>=0) SECTIONS[idx].id = data[0].id;
-      LS.set('sections', SECTIONS);
-    }
+    const {error} = await _sb.from('sections_objectifs')
+      .insert({axe:s.axe, type_travaux:s.type, ml:s.ml, pk1:s.pk1||null, pk2:s.pk2||null});
+    if(!error) await DB.loadSections();
   },
   async deleteSection(id) {
-    if(!USE_DB) return;
-    if(typeof id === 'number') return; // ID local uniquement
-    await _sb.from('sections_objectifs').delete().eq('id', id);
+    const {error} = await _sb.from('sections_objectifs').delete().eq('id',id);
+    if(!error) await DB.loadSections();
   },
 
-  // RÉCEPTIONS
+  // ── RÉCEPTIONS ──
   async loadReceptions() {
-    if(!USE_DB) return;
     const {data,error} = await _sb.from('receptions').select('*').order('date_trav');
-    if(data && !error) {
+    if(data && !error){
       RECEPTIONS = data.map(r=>({
-        id: r.id, axe: r.axe, natKey: r.nat_key,
-        natLabel: r.nat_label, pk1m: r.pk1_m, pk2m: r.pk2_m,
-        pk1str: r.pk1_str||fmtPK(r.pk1_m), pk2str: r.pk2_str||fmtPK(r.pk2_m),
-        ml: r.ml, date: r.date_trav, heure: r.heure||'',
-        status: r.validated ? 'confirmed' : 'pending',
-        qty: r.qty, createdBy: r.created_by||'topo'
+        id:r.id, axe:r.axe, natKey:r.nat_key,
+        natLabel:r.nat_label,
+        pk1m:r.pk1_m, pk2m:r.pk2_m,
+        pk1str:r.pk1_str||fmtPK(r.pk1_m),
+        pk2str:r.pk2_str||fmtPK(r.pk2_m),
+        ml:r.ml, date:r.date_trav, heure:r.heure||'',
+        status:r.validated?'confirmed':'pending',
+        qty:r.qty, createdBy:r.created_by||'topo'
       }));
-      LS.set('receptions', RECEPTIONS);
+      LS.set('receptions',RECEPTIONS);
       renderPendingRecs(); renderAdminRecs(); renderAvancement(); updatePendingBadge();
     }
   },
   async saveReception(r) {
-    if(!USE_DB) return;
-    const {data} = await _sb.from('receptions').insert({
-      axe: r.axe, nat_key: r.natKey, nat_label: r.natLabel,
-      pk1_m: r.pk1m, pk2_m: r.pk2m,
-      pk1_str: r.pk1str, pk2_str: r.pk2str,
-      ml: r.ml, date_trav: r.date, heure: r.heure||'',
-      validated: false, created_by: r.createdBy||'topo'
-    }).select();
-    if(data && data[0]) {
-      const idx = RECEPTIONS.findIndex(x=>x.id===r.id);
-      if(idx>=0) RECEPTIONS[idx].id = data[0].id;
-      LS.set('receptions', RECEPTIONS);
-    }
+    const {error} = await _sb.from('receptions').insert({
+      axe:r.axe, nat_key:r.natKey, nat_label:r.natLabel,
+      pk1_m:r.pk1m, pk2_m:r.pk2m,
+      pk1_str:r.pk1str, pk2_str:r.pk2str,
+      ml:r.ml, date_trav:r.date, heure:r.heure||'',
+      validated:false, created_by:r.createdBy||'topo'
+    });
+    if(!error) await DB.loadReceptions();
+    else alert('Erreur sauvegarde réception : '+JSON.stringify(error));
   },
   async confirmReception(id, qty) {
-    if(!USE_DB) return;
-    await _sb.from('receptions').update({validated:true, qty:qty||null}).eq('id', id);
+    const {error} = await _sb.from('receptions')
+      .update({validated:true, qty:qty||null}).eq('id',id);
+    if(!error) await DB.loadReceptions();
+    else alert('Erreur confirmation : '+JSON.stringify(error));
   },
   async updateReception(id, fields) {
-    if(!USE_DB) return;
-    await _sb.from('receptions').update({
-      date_trav: fields.date, heure: fields.heure,
-      pk1_m: fields.pk1m, pk2_m: fields.pk2m,
-      pk1_str: fields.pk1str, pk2_str: fields.pk2str,
-      ml: fields.ml
-    }).eq('id', id);
+    const {error} = await _sb.from('receptions').update({
+      date_trav:fields.date, heure:fields.heure,
+      pk1_m:fields.pk1m, pk2_m:fields.pk2m,
+      pk1_str:fields.pk1str, pk2_str:fields.pk2str,
+      ml:fields.ml
+    }).eq('id',id);
+    if(!error) await DB.loadReceptions();
   },
   async deleteReception(id) {
-    if(!USE_DB) return;
-    if(typeof id === 'number') return;
-    await _sb.from('receptions').delete().eq('id', id);
+    const {error} = await _sb.from('receptions').delete().eq('id',id);
+    if(!error) await DB.loadReceptions();
   },
 
-  // POINTS À TEMPS
+  // ── POINTS À TEMPS ──
   async loadPAT() {
-    if(!USE_DB) return;
-    const {data,error} = await _sb.from('points_temps').select('*').order('date_trav', {ascending:false});
-    if(data && !error) {
+    const {data,error} = await _sb.from('points_temps').select('*').order('date_trav',{ascending:false});
+    if(data && !error){
       PAT_DATA = data.map(p=>({
-        id: p.id, axe: p.axe, date: p.date_trav,
-        heure: p.heure||'', zone: p.zone||'',
-        ndp: p.ndp||0, epauf: p.epauf||0, defl: p.defl||0
+        id:p.id, axe:p.axe, date:p.date_trav,
+        heure:p.heure||'', zone:p.zone||'',
+        ndp:p.ndp||0, epauf:p.epauf||0, defl:p.defl||0
       }));
-      LS.set('pat_data', PAT_DATA);
+      LS.set('pat_data',PAT_DATA);
       renderPATHistory(); updatePATCumuls();
     }
   },
   async savePAT(p) {
-    if(!USE_DB) return;
-    const {data} = await _sb.from('points_temps').insert({
-      axe: p.axe, date_trav: p.date, heure: p.heure||'',
-      zone: p.zone||'', ndp: p.ndp||0, epauf: p.epauf||0, defl: p.defl||0
-    }).select();
-    if(data && data[0]) {
-      const idx = PAT_DATA.findIndex(x=>x.id===p.id);
-      if(idx>=0) PAT_DATA[idx].id = data[0].id;
-      LS.set('pat_data', PAT_DATA);
-    }
+    const {error} = await _sb.from('points_temps').insert({
+      axe:p.axe, date_trav:p.date, heure:p.heure||'',
+      zone:p.zone||'', ndp:p.ndp||0, epauf:p.epauf||0, defl:p.defl||0
+    });
+    if(!error) await DB.loadPAT();
+    else alert('Erreur sauvegarde PAT : '+JSON.stringify(error));
   },
   async updatePAT(id, p) {
-    if(!USE_DB) return;
-    await _sb.from('points_temps').update({
-      zone: p.zone, date_trav: p.date, heure: p.heure||'',
-      ndp: p.ndp||0, epauf: p.epauf||0, defl: p.defl||0
-    }).eq('id', id);
+    const {error} = await _sb.from('points_temps').update({
+      zone:p.zone, date_trav:p.date, heure:p.heure||'',
+      ndp:p.ndp||0, epauf:p.epauf||0, defl:p.defl||0
+    }).eq('id',id);
+    if(!error) await DB.loadPAT();
   },
   async deletePAT(id) {
-    if(!USE_DB) return;
-    if(typeof id === 'number') return;
-    await _sb.from('points_temps').delete().eq('id', id);
+    const {error} = await _sb.from('points_temps').delete().eq('id',id);
+    if(!error) await DB.loadPAT();
+  },
+
+  // ── SYNCHRONISATION EN TEMPS RÉEL ──
+  // Abonnement aux changements Supabase (realtime)
+  subscribeAll() {
+    // Réceptions
+    _sb.channel('receptions-changes')
+      .on('postgres_changes',{event:'*',schema:'public',table:'receptions'}, ()=>DB.loadReceptions())
+      .subscribe();
+    // Sections
+    _sb.channel('sections-changes')
+      .on('postgres_changes',{event:'*',schema:'public',table:'sections_objectifs'}, ()=>DB.loadSections())
+      .subscribe();
+    // Axes
+    _sb.channel('axes-changes')
+      .on('postgres_changes',{event:'*',schema:'public',table:'axes'}, ()=>DB.loadAxes())
+      .subscribe();
+    // Points à temps
+    _sb.channel('pat-changes')
+      .on('postgres_changes',{event:'*',schema:'public',table:'points_temps'}, ()=>DB.loadPAT())
+      .subscribe();
+  },
+
+  // ── CHARGEMENT INITIAL COMPLET ──
+  async loadAll() {
+    showLoader('Chargement des données...');
+    await Promise.all([
+      DB.loadAxes(),
+      DB.loadSections(),
+      DB.loadReceptions(),
+      DB.loadPAT()
+    ]);
+    hideLoader();
+    DB.subscribeAll(); // Activer la synchro temps réel
   }
 };
+
+function showLoader(msg) {
+  let el=document.getElementById('db-loader');
+  if(!el){
+    el=document.createElement('div');
+    el.id='db-loader';
+    el.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(23,22,15,.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:var(--sans)';
+    el.innerHTML='<div style="font-size:32px;margin-bottom:16px">🗺️</div><div style="font-size:15px;font-weight:500">TopoCT</div><div id="loader-msg" style="font-size:12px;color:rgba(255,255,255,.6);margin-top:8px">'+msg+'</div><div style="margin-top:20px;width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite"></div>';
+    document.body.appendChild(el);
+    const style=document.createElement('style');
+    style.textContent='@keyframes spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(style);
+  } else {
+    document.getElementById('loader-msg').textContent=msg;
+    el.style.display='flex';
+  }
+}
+function hideLoader() {
+  const el=document.getElementById('db-loader');
+  if(el) el.style.display='none';
+}
 </script>
+
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
@@ -799,18 +841,18 @@ function renderAxesList(){
   if(!AXES.length){c.innerHTML='<div class="empty-state">Aucun axe défini</div>';return;}
   c.innerHTML=AXES.map((a,i)=>`<div class="axe-item"><span style="font-size:13px;font-weight:500">${a}</span><button class="del-btn" onclick="delAxe(${i})">Supprimer</button></div>`).join('');
 }
-function addAxe(){
+async function addAxe(){
   const v=document.getElementById('new-axe-nom').value.trim();if(!v)return;
   AXES.push(v);LS.set('axes',AXES);
   document.getElementById('new-axe-nom').value='';
   populateAxeSelects();
-  DB.saveAxe(v);
+  await DB.saveAxe(v);
 }
-function delAxe(i){
+async function delAxe(i){
   if(!confirm('Supprimer cet axe ?'))return;
   const nom=AXES[i];
   AXES.splice(i,1);LS.set('axes',AXES);populateAxeSelects();
-  DB.deleteAxe(nom);
+  await DB.deleteAxe(nom);
 }
 function checkNoSections(){
   const axe=document.getElementById('t-axe').value;
@@ -829,7 +871,7 @@ function calcObjPK(){
   const p2=parsePK(document.getElementById('obj-pk2').value);
   document.getElementById('obj-calc').textContent=(p1!==null&&p2!==null&&p2>p1)?(p2-p1).toLocaleString('fr-FR')+' ml calculés':'— ml calculés';
 }
-function addObjSection(){
+async function addObjSection(){
   const axe=document.getElementById('obj-axe-sel').value;
   const type=document.getElementById('obj-type').value;
   const methode=document.getElementById('obj-methode').value;
@@ -846,7 +888,7 @@ function addObjSection(){
   const ok=document.getElementById('save-obj');ok.style.display='block';
   setTimeout(()=>ok.style.display='none',3000);
   renderSections();renderAvancement();checkNoSections();
-  DB.saveSection(sec);
+  await DB.saveSection(sec);
 }
 function renderSections(){
   const c=document.getElementById('sections-list');if(!c)return;
@@ -879,7 +921,7 @@ function delSection(i){
 }
 
 // ── SAVE RÉCEPTION ──
-function saveRec(){
+async function saveRec(){
   if(!selectedNatKey){alert('Choisissez une nature de travaux.');return;}
   const axe=document.getElementById('t-axe').value;
   const date=document.getElementById('t-date').value;
@@ -904,7 +946,7 @@ function saveRec(){
   const ok=document.getElementById('save-ok-topo');ok.style.display='block';
   setTimeout(()=>ok.style.display='none',3000);
   renderPendingRecs();renderAdminRecs();renderAvancement();
-  DB.saveReception(rec);
+  await DB.saveReception(rec);
 }
 
 // ── AFFICHAGE RÉCEPTIONS EN ATTENTE (vue topographe) ──
@@ -997,7 +1039,7 @@ function renderAdminRecs(){
   }
 }
 
-function confirmRec(id){
+async function confirmRec(id){
   const i=RECEPTIONS.findIndex(r=>r.id===id);if(i<0)return;
   const r=RECEPTIONS[i];
   const needsVol=['gnt20_pave','gnt15_pave','sable','pave','gnt20_bic'].includes(r.natKey);
@@ -1008,8 +1050,8 @@ function confirmRec(id){
   }
   RECEPTIONS[i]={...r,status:'confirmed',qty,confirmedAt:new Date().toISOString()};
   LS.set('receptions',RECEPTIONS);
-  updatePendingBadge();renderPendingRecs();renderAdminRecs();renderAvancement();
-  DB.confirmReception(r.id, qty);
+  updatePendingBadge();
+  await DB.confirmReception(r.id, qty);
 }
 
 function editRec(id){
@@ -1033,7 +1075,7 @@ function editRec(id){
   document.getElementById('admin-overlay').style.display='flex';
 }
 
-function saveEditRec(id){
+async function saveEditRec(id){
   const i=RECEPTIONS.findIndex(r=>r.id===id);if(i<0)return;
   const p1=parsePK(document.getElementById('edit-pk1').value);
   const p2=parsePK(document.getElementById('edit-pk2').value);
@@ -1059,9 +1101,9 @@ function saveEditRec(id){
   closeOverlay();renderPendingRecs();renderAdminRecs();renderAvancement();
 }
 
-function deleteRec(id){
+async function deleteRec(id){
   if(!confirm('Supprimer cette réception ?'))return;
-  DB.deleteReception(id);
+  await DB.deleteReception(id);
   RECEPTIONS=RECEPTIONS.filter(r=>r.id!==id);
   LS.set('receptions',RECEPTIONS);
   updatePendingBadge();renderPendingRecs();renderAdminRecs();renderAvancement();
@@ -1080,7 +1122,7 @@ function savePAT(){
   setTimeout(()=>ok.style.display='none',3000);
 }
 function valPAT(){alert('Quantités validées.');}
-function saveAdmPAT(){
+async function saveAdmPAT(){
   const entry={
     id:Date.now(),
     axe:document.getElementById('adm-pat-axe').value,
@@ -1096,7 +1138,7 @@ function saveAdmPAT(){
   const ok=document.getElementById('save-adm-pat');ok.style.display='block';
   setTimeout(()=>ok.style.display='none',3000);
   renderPATHistory();updatePATCumuls();
-  DB.savePAT(entry);
+  await DB.savePAT(entry);
 }
 function renderPATHistory(){
   const c=document.getElementById('pat-history-list');if(!c)return;
@@ -1122,10 +1164,10 @@ function renderPATHistory(){
     </div>`;
   }).join('');
 }
-function delPAT(i){
+async function delPAT(i){
   if(!confirm('Supprimer ?'))return;
   const entry=PAT_DATA[i];
-  DB.deletePAT(entry.id);
+  await DB.deletePAT(entry.id);
   PAT_DATA.splice(i,1);LS.set('pat_data',PAT_DATA);
   renderPATHistory();updatePATCumuls();
 }
@@ -1150,7 +1192,7 @@ function editPAT(i){
     </div>`;
   document.getElementById('admin-overlay').style.display='flex';
 }
-function saveEditPAT(i){
+async function saveEditPAT(i){
   PAT_DATA[i]={...PAT_DATA[i],
     zone:document.getElementById('e-zone').value,
     date:document.getElementById('e-date').value,
@@ -1159,9 +1201,8 @@ function saveEditPAT(i){
     epauf:parseFloat(document.getElementById('e-epauf').value)||0,
     defl:parseFloat(document.getElementById('e-defl').value)||0
   };
-  LS.set('pat_data',PAT_DATA);
-  DB.updatePAT(PAT_DATA[i].id, PAT_DATA[i]);
-  closeOverlay();renderPATHistory();updatePATCumuls();
+  await DB.updatePAT(PAT_DATA[i].id, PAT_DATA[i]);
+  closeOverlay();
 }
 function updatePATCumuls(){
   const tN=PAT_DATA.reduce((a,p)=>a+(p.ndp||0),0);
@@ -1672,24 +1713,13 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catc
   populateAxeSelects();renderSections();renderAvancement();
   renderPendingRecs();renderPATHistory();updatePATCumuls();
   renderBibList();updatePendingBadge();updateNetworkStatus();
-  // Charger les données depuis Supabase
-  if(USE_DB){
-    DB.loadAxes();
-    DB.loadSections();
-    DB.loadReceptions();
-    DB.loadPAT();
-  }
-  // Afficher le choix de rôle si jamais défini
-  if(!USER_ROLE){
-    setTimeout(()=>showRoleChoice(), 800);
-  } else if(USER_ROLE==='admin'){
-    // Admin connu → vérifier le mot de passe en silence
-    const btn=document.getElementById('role-btn');
-    btn.textContent='👤';btn.className='role-pill r-topo';
-  } else {
-    const btn=document.getElementById('role-btn');
-    btn.textContent='👤';btn.className='role-pill r-topo';
-  }
+  // Charger toutes les données Supabase + activer synchro temps réel
+  DB.loadAll().then(()=>{
+    // Afficher le choix de rôle si jamais défini
+    if(!USER_ROLE){
+      setTimeout(()=>showRoleChoice(), 400);
+    }
+  });
 })();
 </script>
 </body>

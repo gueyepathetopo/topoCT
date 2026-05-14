@@ -405,7 +405,7 @@ tr:last-child td{border-bottom:none;}
   <div class="tb-brand"><h1>TopoCT</h1><p>Suivi topographique</p></div>
   <div class="tb-right">
     <span class="pending-badge" id="pending-badge">0</span>
-    <button class="role-pill r-topo" id="role-btn" onclick="requestAdmin()">Admin</button>
+    <button class="role-pill r-topo" id="role-btn" onclick="requestAdmin()">👤</button>
   </div>
 </div>
 
@@ -1488,41 +1488,143 @@ function exportExcel(){
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
 }
 
-// ── SÉCURITÉ ADMIN ──
+// ── SÉCURITÉ — RÔLE UNIQUE PAR APPAREIL ──
+// USER_ROLE = null (pas encore choisi) | 'operateur' | 'admin'
+let USER_ROLE = LS.get('user_role') || null;
+
 function requestAdmin(){
+  // Si déjà admin → déconnexion
   if(IS_ADMIN){exitAdmin();return;}
-  if(ADMIN_DEVICE&&ADMIN_DEVICE!==DEVICE_ID){showOverlayMsg('Accès refusé','Cet appareil n\'est pas l\'appareil administrateur.','error');return;}
-  if(!ADMIN_PWD)showFirstLogin();else showPinEntry();
+  // Si déjà opérateur → proposer de se connecter en admin
+  if(USER_ROLE==='operateur'){showPinEntry();return;}
+  // Jamais choisi → afficher le choix
+  showRoleChoice();
 }
-function showFirstLogin(){
-  document.getElementById('overlay-content').innerHTML=`<div class="overlay-title">Première connexion admin</div><div class="overlay-sub">Code temporaire — changez-le immédiatement.</div><div class="overlay-code">${FIRST_PWD}</div><div class="f"><label>Nouveau mot de passe</label><input type="password" id="new-pwd1" placeholder="••••" inputmode="numeric" maxlength="8"></div><div class="f"><label>Confirmer</label><input type="password" id="new-pwd2" placeholder="••••" inputmode="numeric" maxlength="8"></div><div class="overlay-err" id="overlay-err"></div><button class="btn btn-green" style="margin-top:12px" onclick="setFirstPwd()">Confirmer</button><button class="btn-sm" style="margin-top:8px;width:100%" onclick="closeOverlay()">Annuler</button>`;
+
+// ── ÉTAPE 1 : Choix du rôle (une seule fois) ──
+function showRoleChoice(){
+  document.getElementById('overlay-content').innerHTML=`
+    <div class="overlay-title">Bienvenue sur TopoCT</div>
+    <div class="overlay-sub" style="margin-bottom:18px">Quel est votre rôle ? Ce choix sera mémorisé sur cet appareil.</div>
+    <button class="btn btn-blue" style="margin-bottom:10px" onclick="chooseRole('operateur')">
+      👷 Je suis opérateur / topographe
+    </button>
+    <button class="btn btn-green" onclick="chooseRole('admin')">
+      🔑 Je suis administrateur
+    </button>`;
   document.getElementById('admin-overlay').style.display='flex';
 }
-function setFirstPwd(){
-  const p1=document.getElementById('new-pwd1').value,p2=document.getElementById('new-pwd2').value,err=document.getElementById('overlay-err');
+
+function chooseRole(role){
+  if(role==='operateur'){
+    USER_ROLE='operateur';
+    LS.set('user_role','operateur');
+    closeOverlay();
+    // Afficher confirmation
+    const btn=document.getElementById('role-btn');
+    btn.textContent='👷';btn.className='role-pill r-topo';
+  } else {
+    // Admin → vérifier si un mot de passe existe déjà en base
+    USER_ROLE='admin_pending';
+    checkAdminPwdExists();
+  }
+}
+
+async function checkAdminPwdExists(){
+  // Vérifier dans Supabase si un mot de passe admin existe
+  let storedPwd = null;
+  try {
+    const {data} = await _sb.from('app_config').select('value').eq('key','admin_pwd').single();
+    if(data) storedPwd = data.value;
+  } catch(e){}
+  
+  if(!storedPwd){
+    // Aucun mot de passe → premier admin, crée le mot de passe
+    showCreatePwd();
+  } else {
+    // Mot de passe existe → entrer le mot de passe pour confirmer
+    ADMIN_PWD = storedPwd;
+    LS.set('admin_pwd', storedPwd);
+    showPinEntry();
+  }
+}
+
+// ── ÉTAPE 2A : Créer le mot de passe (premier admin) ──
+function showCreatePwd(){
+  document.getElementById('overlay-content').innerHTML=`
+    <div class="overlay-title">Créer le mot de passe admin</div>
+    <div class="overlay-sub">Vous êtes le premier administrateur. Créez un mot de passe que vous pourrez partager avec d'autres admins.</div>
+    <div class="f"><label>Nouveau mot de passe (4 chiffres min.)</label>
+      <input type="password" id="new-pwd1" placeholder="••••" inputmode="numeric" maxlength="8" style="font-size:18px;text-align:center;letter-spacing:4px;font-family:var(--mono)">
+    </div>
+    <div class="f"><label>Confirmer le mot de passe</label>
+      <input type="password" id="new-pwd2" placeholder="••••" inputmode="numeric" maxlength="8" style="font-size:18px;text-align:center;letter-spacing:4px;font-family:var(--mono)">
+    </div>
+    <div class="overlay-err" id="overlay-err"></div>
+    <button class="btn btn-green" style="margin-top:12px" onclick="setFirstPwd()">Créer et accéder</button>
+    <button class="btn-sm" style="margin-top:8px;width:100%" onclick="closeOverlay()">Annuler</button>`;
+  document.getElementById('admin-overlay').style.display='flex';
+}
+
+async function setFirstPwd(){
+  const p1=document.getElementById('new-pwd1').value;
+  const p2=document.getElementById('new-pwd2').value;
+  const err=document.getElementById('overlay-err');
   if(p1.length<4){err.textContent='Minimum 4 caractères.';err.style.display='block';return;}
-  if(p1!==p2){err.textContent='Ne correspondent pas.';err.style.display='block';return;}
-  ADMIN_PWD=p1;LS.set('admin_pwd',ADMIN_PWD);ADMIN_DEVICE=DEVICE_ID;LS.set('admin_device',ADMIN_DEVICE);
+  if(p1!==p2){err.textContent='Les mots de passe ne correspondent pas.';err.style.display='block';return;}
+  // Sauvegarder dans Supabase pour tous les appareils
+  try {
+    await _sb.from('app_config').upsert({key:'admin_pwd', value:p1});
+  } catch(e){}
+  ADMIN_PWD=p1;LS.set('admin_pwd',p1);
+  USER_ROLE='admin';LS.set('user_role','admin');
   closeOverlay();enterAdmin();
 }
+
+// ── ÉTAPE 2B : Entrer le mot de passe (admin existant) ──
 function showPinEntry(){
-  document.getElementById('overlay-content').innerHTML=`<div class="overlay-title">Accès administrateur</div><div class="overlay-sub">Entrez votre mot de passe.</div><div class="f"><input type="password" id="pwd-inp" placeholder="Mot de passe" inputmode="numeric" style="font-size:18px;text-align:center;letter-spacing:4px;font-family:var(--mono)" onkeydown="if(event.key==='Enter')checkPwd()"></div><div class="overlay-err" id="overlay-err"></div><button class="btn btn-blue" style="margin-top:12px" onclick="checkPwd()">Connexion</button><button class="btn-sm" style="margin-top:8px;width:100%" onclick="closeOverlay()">Annuler</button>`;
+  document.getElementById('overlay-content').innerHTML=`
+    <div class="overlay-title">Connexion administrateur</div>
+    <div class="overlay-sub">Entrez le mot de passe administrateur.</div>
+    <div class="f">
+      <input type="password" id="pwd-inp" placeholder="••••" inputmode="numeric"
+        style="font-size:22px;text-align:center;letter-spacing:6px;font-family:var(--mono)"
+        onkeydown="if(event.key==='Enter')checkPwd()">
+    </div>
+    <div class="overlay-err" id="overlay-err"></div>
+    <button class="btn btn-blue" style="margin-top:12px" onclick="checkPwd()">Connexion</button>
+    <button class="btn-sm" style="margin-top:8px;width:100%" onclick="closeOverlay()">Annuler</button>`;
   document.getElementById('admin-overlay').style.display='flex';
   setTimeout(()=>{const el=document.getElementById('pwd-inp');if(el)el.focus();},100);
 }
-function checkPwd(){
+
+async function checkPwd(){
   const v=document.getElementById('pwd-inp').value;
-  if(v===ADMIN_PWD){closeOverlay();enterAdmin();}
-  else{const err=document.getElementById('overlay-err');err.textContent='Mot de passe incorrect.';err.style.display='block';document.getElementById('pwd-inp').value='';}
+  // Vérifier d'abord en local, sinon dans Supabase
+  let pwd=ADMIN_PWD;
+  if(!pwd){
+    try{const {data}=await _sb.from('app_config').select('value').eq('key','admin_pwd').single();if(data)pwd=data.value;}catch(e){}
+  }
+  if(v===pwd){
+    ADMIN_PWD=pwd;LS.set('admin_pwd',pwd);
+    USER_ROLE='admin';LS.set('user_role','admin');
+    closeOverlay();enterAdmin();
+  } else {
+    const err=document.getElementById('overlay-err');
+    err.textContent='Mot de passe incorrect.';err.style.display='block';
+    document.getElementById('pwd-inp').value='';
+  }
 }
+
 function showOverlayMsg(title,msg,type){
   document.getElementById('overlay-content').innerHTML=`<div class="overlay-title">${title}</div><div style="font-size:13px;color:${type==='error'?'var(--red)':'var(--green)'};margin-bottom:16px;line-height:1.5">${msg}</div><button class="btn-sm" style="width:100%" onclick="closeOverlay()">Fermer</button>`;
   document.getElementById('admin-overlay').style.display='flex';
 }
 function closeOverlay(){document.getElementById('admin-overlay').style.display='none';}
+
 function enterAdmin(){
   IS_ADMIN=true;
-  document.getElementById('role-btn').textContent='Admin ✓';
+  document.getElementById('role-btn').textContent='🔑';
   document.getElementById('role-btn').className='role-pill r-admin';
   document.getElementById('stab-admin').style.display='block';
   saisieTab('admin',document.getElementById('stab-admin'));
@@ -1530,7 +1632,8 @@ function enterAdmin(){
 }
 function exitAdmin(){
   IS_ADMIN=false;
-  document.getElementById('role-btn').textContent='Admin';
+  USER_ROLE='operateur';LS.set('user_role','operateur');
+  document.getElementById('role-btn').textContent='👤';
   document.getElementById('role-btn').className='role-pill r-topo';
   document.getElementById('stab-admin').style.display='none';
   saisieTab('topo',document.querySelector('.stab'));
@@ -1575,6 +1678,17 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catc
     DB.loadSections();
     DB.loadReceptions();
     DB.loadPAT();
+  }
+  // Afficher le choix de rôle si jamais défini
+  if(!USER_ROLE){
+    setTimeout(()=>showRoleChoice(), 800);
+  } else if(USER_ROLE==='admin'){
+    // Admin connu → vérifier le mot de passe en silence
+    const btn=document.getElementById('role-btn');
+    btn.textContent='👤';btn.className='role-pill r-topo';
+  } else {
+    const btn=document.getElementById('role-btn');
+    btn.textContent='👤';btn.className='role-pill r-topo';
   }
 })();
 </script>

@@ -172,6 +172,10 @@ const DB = {
     _sb.channel('pat-changes')
       .on('postgres_changes',{event:'*',schema:'public',table:'points_temps'}, ()=>DB.loadPAT())
       .subscribe();
+    // Natures custom
+    _sb.channel('natures-changes')
+      .on('postgres_changes',{event:'*',schema:'public',table:'natures_custom'}, ()=>loadCustomNatures())
+      .subscribe();
   },
 
   // ── CHARGEMENT INITIAL COMPLET ──
@@ -181,7 +185,8 @@ const DB = {
       DB.loadAxes(),
       DB.loadSections(),
       DB.loadReceptions(),
-      DB.loadPAT()
+      DB.loadPAT(),
+      loadCustomNatures()
     ]);
     hideLoader();
     DB.subscribeAll(); // Activer la synchro temps réel
@@ -612,6 +617,40 @@ tr:last-child td{border-bottom:none;}
         </div>
       </div>
       <div class="card"><div class="card-title">Axes définis</div><div id="axes-list"></div></div>
+
+      <div class="sec" style="margin-top:4px">Natures de travaux personnalisées</div>
+      <div class="card">
+        <div class="card-title">Ajouter une nature</div>
+        <div class="f">
+          <label>Nom de la nature</label>
+          <input type="text" id="nat-nom" placeholder="ex: Remblai, Enrobé, Cunette...">
+        </div>
+        <div class="f-row2">
+          <div class="f" style="margin:0">
+            <label>Famille</label>
+            <select id="nat-famille">
+              <option value="pave">Voirie — pavés</option>
+              <option value="bic">Zone bicouche</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+          <div class="f" style="margin:0">
+            <label>Unité</label>
+            <select id="nat-unite">
+              <option value="ml">ml</option>
+              <option value="m³">m³</option>
+              <option value="m²">m²</option>
+              <option value="u">unités</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-blue" style="margin-top:8px" onclick="addCustomNature()">+ Ajouter</button>
+        <div class="save-ok green" id="save-nat">✓ Nature ajoutée — visible dans la saisie</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Natures personnalisées</div>
+        <div id="custom-natures-admin-list"><div class="empty-state">Aucune nature personnalisée</div></div>
+      </div>
     </div>
 
     <!-- SECTIONS OBJECTIFS -->
@@ -746,6 +785,7 @@ let SECTIONS=[];
 let RECEPTIONS=[];
 let PAT_DATA=[];
 let BIB_DATA=LS.get('bib_data')||[];
+let CUSTOM_NATURES=[];
 let ADMIN_PWD=LS.get('admin_pwd')||null;
 let ADMIN_DEVICE=LS.get('admin_device')||null;
 let IS_ADMIN=false;
@@ -939,7 +979,9 @@ async function saveRec(){
   const ml=p2-p1;
   const rec={
     axe,natKey:selectedNatKey,
-    natLabel:NATURES[selectedNatKey].label,
+    natLabel:selectedNatKey.startsWith('custom_')
+      ? (CUSTOM_NATURES.find(n=>n.id===selectedNatKey.replace('custom_',''))||{nom:selectedNatKey}).nom
+      : NATURES[selectedNatKey].label,
     pk1m:p1,pk2m:p2,pk1str:document.getElementById('pk1').value,
     pk2str:document.getElementById('pk2').value,
     ml,date,heure,status:'pending',qty:null,
@@ -1675,6 +1717,70 @@ function exitAdmin(){
   document.getElementById('role-btn').className='role-pill r-topo';
   document.getElementById('stab-admin').style.display='none';
   saisieTab('topo',document.querySelector('.stab'));
+}
+
+// ── NATURES PERSONNALISÉES ──
+async function loadCustomNatures(){
+  const {data,error}=await _sb.from('natures_custom').select('*').order('created_at');
+  if(!error){
+    CUSTOM_NATURES=(data||[]);
+    renderCustomNaturesAdmin();
+    renderCustomNaturesBtns();
+  }
+}
+
+function renderCustomNaturesAdmin(){
+  const c=document.getElementById('custom-natures-admin-list');if(!c)return;
+  if(!CUSTOM_NATURES.length){c.innerHTML='<div class="empty-state">Aucune nature personnalisée</div>';return;}
+  const famLabels={pave:'Voirie pavés',bic:'Zone bicouche',autre:'Autre'};
+  c.innerHTML=CUSTOM_NATURES.map((n,i)=>`
+    <div class="axe-item">
+      <div>
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${n.nom}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">${famLabels[n.famille]||n.famille} · ${n.unite}</div>
+      </div>
+      <button class="del-btn" onclick="delCustomNature('${n.id}')">Supprimer</button>
+    </div>`).join('');
+}
+
+function renderCustomNaturesBtns(){
+  const block=document.getElementById('custom-natures-block');
+  const btns=document.getElementById('custom-natures-btns');
+  if(!block||!btns)return;
+  if(!CUSTOM_NATURES.length){block.style.display='none';return;}
+  block.style.display='block';
+  const famColors={pave:'sel-pave',bic:'sel-bic',autre:''};
+  btns.innerHTML=CUSTOM_NATURES.map(n=>`
+    <button class="nat-btn" onclick="selNat(this,'custom_${n.id}','${n.famille}')" data-key="custom_${n.id}">
+      <span class="nat-step">+</span>
+      <span class="nat-dot" style="background:#606060"></span>
+      <span class="nat-info">
+        <span class="nat-name">${n.nom}</span><br>
+        <span class="nat-unit">${n.unite}</span>
+      </span>
+      <span class="nat-badge" style="background:var(--bg2);color:var(--text2)">${n.unite}</span>
+    </button>`).join('');
+}
+
+async function addCustomNature(){
+  const nom=document.getElementById('nat-nom').value.trim();
+  if(!nom){alert('Entrez un nom.');return;}
+  const famille=document.getElementById('nat-famille').value;
+  const unite=document.getElementById('nat-unite').value;
+  const {error}=await _sb.from('natures_custom').insert({nom,famille,unite});
+  if(!error){
+    document.getElementById('nat-nom').value='';
+    const ok=document.getElementById('save-nat');ok.style.display='block';
+    setTimeout(()=>ok.style.display='none',3000);
+    await loadCustomNatures();
+  } else alert('Erreur: '+error.message);
+}
+
+async function delCustomNature(id){
+  if(!confirm('Supprimer cette nature ?'))return;
+  const {error}=await _sb.from('natures_custom').delete().eq('id',id);
+  if(!error) await loadCustomNatures();
+  else alert('Erreur: '+error.message);
 }
 
 // ── TABS ──

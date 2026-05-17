@@ -297,6 +297,7 @@ input,select,textarea,button{font-family:var(--sans);outline:none;-webkit-appear
 .nat-btn:active{opacity:.75;}
 .nat-btn.sel-pave{border-color:#3B6D11;background:var(--green-l);}
 .nat-btn.sel-bic{border-color:#5C44B8;background:var(--purple-l);}
+.nat-btn.sel-lithos{border-color:#8B4513;background:#F5E6D0;}
 .nat-step{font-size:10px;font-weight:600;color:var(--text3);min-width:16px;}
 .nat-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
 .nat-info{flex:1;}
@@ -631,6 +632,7 @@ tr:last-child td{border-bottom:none;}
             <select id="nat-famille">
               <option value="pave">Voirie — pavés</option>
               <option value="bic">Zone bicouche</option>
+              <option value="lithos">Lithos</option>
               <option value="autre">Autre</option>
             </select>
           </div>
@@ -662,6 +664,7 @@ tr:last-child td{border-bottom:none;}
           <select id="obj-type">
             <option value="pave">Voirie — Pavés (complet)</option>
             <option value="bic">Zone — Bicouche (complet)</option>
+            <option value="lithos">Lithos (complet)</option>
           </select>
         </div>
         <div class="f"><label>Méthode</label>
@@ -805,7 +808,11 @@ const NATURES={
   gnt20_bic:{label:'GNT 20cm — bicouche',color:'#1A7A72',unit:'m³',family:'bic'},
   imp:{label:'Imprégnation',color:'#B55C10',unit:'ml',family:'bic'},
   mono:{label:'Monocouche',color:'#5C44B8',unit:'ml',family:'bic'},
-  bic:{label:'Bicouche',color:'#A83860',unit:'ml',family:'bic'}
+  bic:{label:'Bicouche',color:'#A83860',unit:'ml',family:'bic'},
+  fond_gnt7:{label:'Fondation GNT 7cm',color:'#8B4513',unit:'m³',family:'lithos'},
+  base_gnt15:{label:'Base GNT 15cm',color:'#A0522D',unit:'m³',family:'lithos'},
+  appro_gnt5:{label:'Appro GNT 5cm',color:'#6B3A2A',unit:'m³',family:'lithos'},
+  appro_gnt15:{label:'Appro GNT base 15cm',color:'#7A4A30',unit:'m³',family:'lithos'}
 };
 
 // ── PK ──
@@ -860,8 +867,8 @@ function onAxeChange(){calcPK();}
 
 // ── NATURE SELECTION ──
 function selNat(btn,key,family){
-  document.querySelectorAll('.nat-btn').forEach(b=>b.classList.remove('sel-pave','sel-bic'));
-  btn.classList.add('sel-'+family);
+  document.querySelectorAll('.nat-btn').forEach(b=>b.classList.remove('sel-pave','sel-bic','sel-lithos'));
+  btn.classList.add('sel-'+(family||'pave'));
   selectedNatKey=key;
 }
 
@@ -953,9 +960,12 @@ function renderSections(){
   // Totaux
   const totPave=SECTIONS.filter(s=>s.type==='pave').reduce((a,s)=>a+s.ml,0);
   const totBic=SECTIONS.filter(s=>s.type==='bic').reduce((a,s)=>a+s.ml,0);
+  const totLith=SECTIONS.filter(s=>s.type==='lithos').reduce((a,s)=>a+s.ml,0);
   const tc=document.getElementById('totaux-obj');
-  tc.innerHTML=(totPave?`<div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--green-l);border-radius:var(--rs);margin-bottom:6px;font-size:12px"><span style="color:var(--green-d);font-weight:500">Total voirie pavés</span><span style="font-family:var(--mono);font-weight:700;color:var(--green)">${totPave.toLocaleString('fr-FR')} ml</span></div>`:'')+
-    (totBic?`<div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--purple-l);border-radius:var(--rs);font-size:12px"><span style="color:var(--purple);font-weight:500">Total zone bicouche</span><span style="font-family:var(--mono);font-weight:700;color:var(--purple)">${totBic.toLocaleString('fr-FR')} ml</span></div>`:'');
+  tc.innerHTML=
+    (totPave?`<div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--green-l);border-radius:var(--rs);margin-bottom:6px;font-size:12px"><span style="color:var(--green-d);font-weight:500">Total voirie pavés</span><span style="font-family:var(--mono);font-weight:700;color:var(--green)">${totPave.toLocaleString('fr-FR')} ml</span></div>`:'')+
+    (totBic?`<div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--purple-l);border-radius:var(--rs);margin-bottom:6px;font-size:12px"><span style="color:var(--purple);font-weight:500">Total zone bicouche</span><span style="font-family:var(--mono);font-weight:700;color:var(--purple)">${totBic.toLocaleString('fr-FR')} ml</span></div>`:'')+
+    (totLith?`<div style="display:flex;justify-content:space-between;padding:8px 10px;background:#F5E6D0;border-radius:var(--rs);font-size:12px"><span style="color:#7A4010;font-weight:500">Total lithos</span><span style="font-family:var(--mono);font-weight:700;color:#7A4010">${totLith.toLocaleString('fr-FR')} ml</span></div>`:'');
 }
 async function delSection(i){
   if(!confirm('Supprimer cette section ?'))return;
@@ -980,8 +990,8 @@ async function saveRec(){
   const rec={
     axe,natKey:selectedNatKey,
     natLabel:selectedNatKey.startsWith('custom_')
-      ? (CUSTOM_NATURES.find(n=>n.id===selectedNatKey.replace('custom_',''))||{nom:selectedNatKey}).nom
-      : NATURES[selectedNatKey].label,
+      ? (CUSTOM_NATURES.find(n=>'custom_'+n.id===selectedNatKey)||{nom:selectedNatKey}).nom
+      : (NATURES[selectedNatKey]?NATURES[selectedNatKey].label:selectedNatKey),
     pk1m:p1,pk2m:p2,pk1str:document.getElementById('pk1').value,
     pk2str:document.getElementById('pk2').value,
     ml,date,heure,status:'pending',qty:null,
@@ -1112,7 +1122,7 @@ function editRec(id){
     <div class="overlay-err" id="overlay-err"></div>
     <div style="display:flex;gap:8px;margin-top:14px">
       <button class="btn-sm" style="flex:1" onclick="closeOverlay()">Annuler</button>
-      <button class="btn btn-green" style="flex:2;padding:10px" onclick="saveEditRec(${id})">Enregistrer</button>
+      <button class="btn btn-green" style="flex:2;padding:10px" onclick="saveEditRec('${id}')">Enregistrer</button>
     </div>`;
   document.getElementById('admin-overlay').style.display='flex';
 }
@@ -1131,7 +1141,7 @@ async function saveEditRec(id){
     document.getElementById('overlay-err').textContent=check.msg;
     document.getElementById('overlay-err').style.display='block';return;
   }
-  RECEPTIONS[i]={...RECEPTIONS[i],
+  const fields={
     date:document.getElementById('edit-date').value,
     heure:document.getElementById('edit-heure').value,
     pk1m:p1,pk2m:p2,
@@ -1139,8 +1149,9 @@ async function saveEditRec(id){
     pk2str:document.getElementById('edit-pk2').value,
     ml:p2-p1
   };
-  LS.set('receptions',RECEPTIONS);
-  closeOverlay();renderPendingRecs();renderAdminRecs();renderAvancement();
+  closeOverlay();
+  // Sauvegarder dans Supabase → DB.loadReceptions() met à jour tous les appareils
+  await DB.updateReception(id, fields);
 }
 
 async function deleteRec(id){
@@ -1328,7 +1339,8 @@ function renderAvancement(){
   AXES.forEach(axe=>{
     const totPave=getObjTotal(axe,'pave');
     const totBic=getObjTotal(axe,'bic');
-    if(!totPave&&!totBic)return;
+    const totLithos=getObjTotal(axe,'lithos');
+    if(!totPave&&!totBic&&!totLithos)return;
     anyAxe=true;
     html+=`<div class="sec">${axe}</div>`;
     if(totPave>0){
@@ -1361,16 +1373,88 @@ function renderAvancement(){
       });
       html+='</div>';
     }
-    // Global
+
+    // ── AVANCEMENT LITHOS ──
+    if(totLithos>0){
+      html+='<div class="card">';
+      html+='<div class="av-family" style="color:#7A4010">Lithos</div>';
+      ['fond_gnt7','base_gnt15','appro_gnt5','appro_gnt15'].forEach(key=>{
+        const nat=NATURES[key];
+        const real=getConfirmedLinear(axe,key);
+        const pct=totLithos>0?Math.min(100,Math.round(real/totLithos*100)):0;
+        html+=`<div class="prog">
+          <div class="prog-hd"><span class="prog-name">${nat.label}</span><span class="prog-pct" style="color:${nat.color}">${pct}%</span></div>
+          <div class="prog-detail">${real.toLocaleString('fr-FR')} ml réalisés / ${totLithos.toLocaleString('fr-FR')} ml prévus</div>
+          <div class="pbar-bg"><div class="pbar" style="width:${pct}%;background:${nat.color}"></div></div>
+        </div>`;
+      });
+      // Natures lithos custom
+      CUSTOM_NATURES.filter(n=>n.famille==='lithos').forEach(n=>{
+        const key='custom_'+n.id;
+        const real=getConfirmedLinear(axe,key);
+        const pct=totLithos>0?Math.min(100,Math.round(real/totLithos*100)):0;
+        html+=`<div class="prog">
+          <div class="prog-hd"><span class="prog-name">${n.nom}</span><span class="prog-pct" style="color:#8B4513">${pct}%</span></div>
+          <div class="prog-detail">${real.toLocaleString('fr-FR')} ml réalisés / ${totLithos.toLocaleString('fr-FR')} ml prévus</div>
+          <div class="pbar-bg"><div class="pbar" style="width:${pct}%;background:#8B4513"></div></div>
+        </div>`;
+      });
+      html+='</div>';
+    }
+    // ── AVANCEMENT GLOBAL (moyenne des % de toutes les couches) ──
     html+=`<div class="global-card">
       <div class="global-title">${axe} — Avancement global</div>`;
+
     if(totPave>0){
-      const rP=getConfirmedLinear(axe,'pave');const pP=Math.min(100,Math.round(rP/totPave*100));
-      html+=`<div class="global-prog"><div class="global-prog-hd"><span class="global-prog-name">Pavés</span><span class="global-prog-pct">${pP}%</span></div><div class="global-prog-sub">${rP.toLocaleString('fr-FR')} ml / ${totPave.toLocaleString('fr-FR')} ml prévus</div><div class="global-pbar-bg"><div class="global-pbar" style="width:${pP}%;background:#4FC08D"></div></div></div>`;
+      // Moyenne des % de toutes les couches pavés réceptionnées
+      const paveKeys=['plat_pave','gnt20_pave','gnt15_pave','sable','pave'];
+      const pavePcts=paveKeys.map(k=>getConfirmedLinear(axe,k)).filter(v=>v>0);
+      // Couches ayant au moins une réception
+      const paveActives=paveKeys.filter(k=>getConfirmedLinear(axe,k)>0);
+      let globalPavePct=0;
+      if(paveActives.length>0){
+        const somme=paveActives.reduce((s,k)=>s+Math.min(100,Math.round(getConfirmedLinear(axe,k)/totPave*100)),0);
+        globalPavePct=Math.round(somme/paveKeys.length); // divisé par total couches (pas seulement actives)
+      }
+      const totalRealPave=paveKeys.reduce((s,k)=>s+getConfirmedLinear(axe,k),0);
+      html+=`<div class="global-prog">
+        <div class="global-prog-hd"><span class="global-prog-name">Voirie pavés — global</span><span class="global-prog-pct">${globalPavePct}%</span></div>
+        <div class="global-prog-sub">Moyenne des ${paveKeys.length} couches · ${totalRealPave.toLocaleString('fr-FR')} ml réceptionnés / ${totPave.toLocaleString('fr-FR')} ml prévus</div>
+        <div class="global-pbar-bg"><div class="global-pbar" style="width:${globalPavePct}%;background:#4FC08D"></div></div>
+      </div>`;
     }
+
     if(totBic>0){
-      const rB=getConfirmedLinear(axe,'bic');const pB=Math.min(100,Math.round(rB/totBic*100));
-      html+=`<div class="global-prog"><div class="global-prog-hd"><span class="global-prog-name">Bicouche</span><span class="global-prog-pct">${pB}%</span></div><div class="global-prog-sub">${rB.toLocaleString('fr-FR')} ml / ${totBic.toLocaleString('fr-FR')} ml prévus</div><div class="global-pbar-bg"><div class="global-pbar" style="width:${pB}%;background:#A888F0"></div></div></div>`;
+      const bicKeys=['plat_bic','gnt20_bic','imp','mono','bic'];
+      const bicActives=bicKeys.filter(k=>getConfirmedLinear(axe,k)>0);
+      let globalBicPct=0;
+      if(bicActives.length>0){
+        const somme=bicActives.reduce((s,k)=>s+Math.min(100,Math.round(getConfirmedLinear(axe,k)/totBic*100)),0);
+        globalBicPct=Math.round(somme/bicKeys.length);
+      }
+      const totalRealBic=bicKeys.reduce((s,k)=>s+getConfirmedLinear(axe,k),0);
+      html+=`<div class="global-prog">
+        <div class="global-prog-hd"><span class="global-prog-name">Zone bicouche — global</span><span class="global-prog-pct">${globalBicPct}%</span></div>
+        <div class="global-prog-sub">Moyenne des ${bicKeys.length} couches · ${totalRealBic.toLocaleString('fr-FR')} ml réceptionnés / ${totBic.toLocaleString('fr-FR')} ml prévus</div>
+        <div class="global-pbar-bg"><div class="global-pbar" style="width:${globalBicPct}%;background:#A888F0"></div></div>
+      </div>`;
+    }
+
+    
+    if(totLithos>0){
+      const lithosKeys=['fond_gnt7','base_gnt15','appro_gnt5','appro_gnt15'];
+      const lithosActives=lithosKeys.filter(k=>getConfirmedLinear(axe,k)>0);
+      let globalLithosPct=0;
+      if(lithosActives.length>0){
+        const somme=lithosActives.reduce((s,k)=>s+Math.min(100,Math.round(getConfirmedLinear(axe,k)/totLithos2*100)),0);
+        globalLithosPct=Math.round(somme/lithosKeys.length);
+      }
+      const totalRealLithos=lithosKeys.reduce((s,k)=>s+getConfirmedLinear(axe,k),0);
+      html+=`<div class="global-prog">
+        <div class="global-prog-hd"><span class="global-prog-name">Lithos — global</span><span class="global-prog-pct">${globalLithosPct}%</span></div>
+        <div class="global-prog-sub">Moyenne des ${lithosKeys.length} couches · ${totalRealLithos.toLocaleString('fr-FR')} ml réceptionnés / ${totLithos.toLocaleString('fr-FR')} ml prévus</div>
+        <div class="global-pbar-bg"><div class="global-pbar" style="width:${globalLithosPct}%;background:#A0522D"></div></div>
+      </div>`;
     }
     html+='</div>';
   });
@@ -1732,15 +1816,57 @@ async function loadCustomNatures(){
 function renderCustomNaturesAdmin(){
   const c=document.getElementById('custom-natures-admin-list');if(!c)return;
   if(!CUSTOM_NATURES.length){c.innerHTML='<div class="empty-state">Aucune nature personnalisée</div>';return;}
-  const famLabels={pave:'Voirie pavés',bic:'Zone bicouche',autre:'Autre'};
+  const famLabels={pave:'Voirie pavés',bic:'Zone bicouche',lithos:'Lithos',autre:'Autre'};
   c.innerHTML=CUSTOM_NATURES.map((n,i)=>`
-    <div class="axe-item">
-      <div>
+    <div class="axe-item" style="flex-wrap:wrap;gap:6px">
+      <div style="flex:1">
         <div style="font-size:13px;font-weight:500;color:var(--text)">${n.nom}</div>
         <div style="font-size:10px;color:var(--text3);margin-top:2px">${famLabels[n.famille]||n.famille} · ${n.unite}</div>
       </div>
-      <button class="del-btn" onclick="delCustomNature('${n.id}')">Supprimer</button>
+      <div style="display:flex;gap:5px;flex-shrink:0">
+        <button class="btn-sm" style="font-size:11px;padding:4px 10px" onclick="editCustomNature('${n.id}','${n.nom}','${n.famille}','${n.unite}')">Modifier</button>
+        <button class="del-btn" onclick="delCustomNature('${n.id}')">Supprimer</button>
+      </div>
     </div>`).join('');
+}
+
+async function editCustomNature(id, nom, famille, unite){
+  document.getElementById('overlay-content').innerHTML=`
+    <div class="overlay-title">Modifier la nature</div>
+    <div class="f"><label>Nom</label><input type="text" id="enat-nom" value="${nom}"></div>
+    <div class="f-row2">
+      <div class="f" style="margin:0"><label>Famille</label>
+        <select id="enat-famille">
+          <option value="pave" ${famille==='pave'?'selected':''}>Voirie pavés</option>
+          <option value="bic" ${famille==='bic'?'selected':''}>Zone bicouche</option>
+          <option value="lithos" ${famille==='lithos'?'selected':''}>Lithos</option>
+          <option value="autre" ${famille==='autre'?'selected':''}>Autre</option>
+        </select>
+      </div>
+      <div class="f" style="margin:0"><label>Unité</label>
+        <select id="enat-unite">
+          <option value="ml" ${unite==='ml'?'selected':''}>ml</option>
+          <option value="m³" ${unite==='m³'?'selected':''}>m³</option>
+          <option value="m²" ${unite==='m²'?'selected':''}>m²</option>
+          <option value="u" ${unite==='u'?'selected':''}>unités</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn-sm" style="flex:1" onclick="closeOverlay()">Annuler</button>
+      <button class="btn btn-green" style="flex:2;padding:10px" onclick="saveEditNature('${id}')">Enregistrer</button>
+    </div>`;
+  document.getElementById('admin-overlay').style.display='flex';
+}
+
+async function saveEditNature(id){
+  const nom=document.getElementById('enat-nom').value.trim();
+  const famille=document.getElementById('enat-famille').value;
+  const unite=document.getElementById('enat-unite').value;
+  if(!nom)return;
+  const {error}=await _sb.from('natures_custom').update({nom,famille,unite}).eq('id',id);
+  if(!error){closeOverlay();await loadCustomNatures();}
+  else alert('Erreur: '+error.message);
 }
 
 function renderCustomNaturesBtns(){
@@ -1749,7 +1875,7 @@ function renderCustomNaturesBtns(){
   if(!block||!btns)return;
   if(!CUSTOM_NATURES.length){block.style.display='none';return;}
   block.style.display='block';
-  const famColors={pave:'sel-pave',bic:'sel-bic',autre:''};
+  const famColors={pave:'sel-pave',bic:'sel-bic',lithos:'sel-lithos',autre:''};
   btns.innerHTML=CUSTOM_NATURES.map(n=>`
     <button class="nat-btn" onclick="selNat(this,'custom_${n.id}','${n.famille}')" data-key="custom_${n.id}">
       <span class="nat-step">+</span>
@@ -1764,16 +1890,17 @@ function renderCustomNaturesBtns(){
 
 async function addCustomNature(){
   const nom=document.getElementById('nat-nom').value.trim();
-  if(!nom){alert('Entrez un nom.');return;}
+  if(!nom){alert('Entrez un nom de nature.');return;}
   const famille=document.getElementById('nat-famille').value;
   const unite=document.getElementById('nat-unite').value;
-  const {error}=await _sb.from('natures_custom').insert({nom,famille,unite});
-  if(!error){
+  try {
+    const {data,error}=await _sb.from('natures_custom').insert({nom,famille,unite}).select();
+    if(error){alert('Erreur ajout nature: '+error.message);return;}
     document.getElementById('nat-nom').value='';
     const ok=document.getElementById('save-nat');ok.style.display='block';
     setTimeout(()=>ok.style.display='none',3000);
     await loadCustomNatures();
-  } else alert('Erreur: '+error.message);
+  } catch(e){alert('Erreur réseau: '+e.message);}
 }
 
 async function delCustomNature(id){

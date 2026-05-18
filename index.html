@@ -501,6 +501,39 @@ tr:last-child td{border-bottom:none;}
         <button class="nat-btn" onclick="selNat(this,'mono','bic')" data-key="mono"><span class="nat-step">④</span><span class="nat-dot" style="background:#5C44B8"></span><span class="nat-info"><span class="nat-name">Monocouche</span><br><span class="nat-unit">ml</span></span><span class="nat-badge" style="background:var(--purple-l);color:var(--purple)">ml</span></button>
         <button class="nat-btn" onclick="selNat(this,'bic','bic')" data-key="bic"><span class="nat-step">⑤</span><span class="nat-dot" style="background:#A83860"></span><span class="nat-info"><span class="nat-name">Bicouche</span><br><span class="nat-unit">ml</span></span><span class="nat-badge" style="background:#FAE6EF;color:#A83860">ml</span></button>
       </div>
+
+      <!-- FAMILLE LITHOS -->
+      <div class="family-block">
+        <div class="family-title" style="color:#7A4010;border-bottom:1px solid var(--border2)">Lithos</div>
+        <button class="nat-btn" onclick="selNat(this,'fond_gnt7','lithos')" data-key="fond_gnt7">
+          <span class="nat-step">①</span><span class="nat-dot" style="background:#8B4513"></span>
+          <span class="nat-info"><span class="nat-name">Fondation GNT 7cm</span><br><span class="nat-unit">m³ — volume saisi par admin</span></span>
+          <span class="nat-badge" style="background:#F5E6D0;color:#7A4010">m³</span>
+        </button>
+        <button class="nat-btn" onclick="selNat(this,'base_gnt15','lithos')" data-key="base_gnt15">
+          <span class="nat-step">②</span><span class="nat-dot" style="background:#A0522D"></span>
+          <span class="nat-info"><span class="nat-name">Base GNT 15cm</span><br><span class="nat-unit">m³ — volume saisi par admin</span></span>
+          <span class="nat-badge" style="background:#F5E6D0;color:#7A4010">m³</span>
+        </button>
+        <button class="nat-btn" onclick="selNat(this,'appro_gnt5','lithos')" data-key="appro_gnt5">
+          <span class="nat-step">③</span><span class="nat-dot" style="background:#6B3A2A"></span>
+          <span class="nat-info"><span class="nat-name">Appro GNT 5cm</span><br><span class="nat-unit">m³ — volume saisi par admin</span></span>
+          <span class="nat-badge" style="background:#F5E6D0;color:#7A4010">m³</span>
+        </button>
+        <button class="nat-btn" onclick="selNat(this,'appro_gnt15','lithos')" data-key="appro_gnt15">
+          <span class="nat-step">④</span><span class="nat-dot" style="background:#7A4A30"></span>
+          <span class="nat-info"><span class="nat-name">Appro GNT base 15cm</span><br><span class="nat-unit">m³ — volume saisi par admin</span></span>
+          <span class="nat-badge" style="background:#F5E6D0;color:#7A4010">m³</span>
+        </button>
+        <div id="custom-natures-lithos-btns"></div>
+      </div>
+
+      <!-- AUTRES NATURES PERSONNALISÉES -->
+      <div id="custom-natures-block" style="display:none">
+        <div class="family-title" style="color:var(--text2)">Autres natures</div>
+        <div id="custom-natures-btns"></div>
+      </div>
+
     </div>
     <div class="card">
       <div class="card-title">Points kilométriques</div>
@@ -1446,7 +1479,7 @@ function renderAvancement(){
       const lithosActives=lithosKeys.filter(k=>getConfirmedLinear(axe,k)>0);
       let globalLithosPct=0;
       if(lithosActives.length>0){
-        const somme=lithosActives.reduce((s,k)=>s+Math.min(100,Math.round(getConfirmedLinear(axe,k)/totLithos2*100)),0);
+        const somme=lithosActives.reduce((s,k)=>s+Math.min(100,Math.round(getConfirmedLinear(axe,k)/totLithos*100)),0);
         globalLithosPct=Math.round(somme/lithosKeys.length);
       }
       const totalRealLithos=lithosKeys.reduce((s,k)=>s+getConfirmedLinear(axe,k),0);

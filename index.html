@@ -443,6 +443,16 @@ tr:last-child td{border-bottom:none;}
 .overlay-code{font-size:28px;font-weight:700;font-family:var(--mono);color:var(--blue);background:var(--blue-l);border-radius:var(--rs);padding:12px;text-align:center;letter-spacing:4px;margin-bottom:16px;}
 .overlay-err{font-size:12px;color:var(--red);margin-top:8px;text-align:center;display:none;}
 .empty-state{text-align:center;padding:20px;color:var(--text3);font-size:13px;}
+.srch-item{padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px;}
+.srch-item.exact{border-left:3px solid var(--green);}
+.srch-item.partial{border-left:3px solid var(--amber);}
+.srch-nat{font-size:13px;font-weight:600;}
+.srch-pk{font-size:11px;font-family:var(--mono);color:var(--text2);margin-top:2px;}
+.srch-meta{font-size:10px;color:var(--text3);margin-top:3px;}
+.srch-qty{font-size:12px;color:var(--green);font-weight:600;margin-top:4px;font-family:var(--mono);}
+.srch-tag{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:500;display:inline-block;margin-top:4px;}
+.srch-exact{background:var(--green-l);color:var(--green);}
+.srch-partial{background:var(--amber-l);color:var(--amber);}
 .no-sections-warn{background:var(--amber-l);border:1px solid #D4A870;border-radius:var(--rs);padding:10px 12px;font-size:12px;color:var(--amber);margin-bottom:10px;line-height:1.5;}
 </style>
 </head>
@@ -820,10 +830,46 @@ tr:last-child td{border-bottom:none;}
 </div>
 
 </div>
+<!-- PAGE RECHERCHE -->
+<div class="page" id="p-recherche" style="padding:12px">
+  <div class="sec" style="margin-top:2px">Recherche par PK</div>
+  <div class="card">
+    <div class="card-title">Entrez les PK à rechercher</div>
+    <div class="f-row2">
+      <div class="f" style="margin:0"><label>PK début</label><input type="text" id="srch-pk1" placeholder="PK30+700" oninput="searchByPK()"></div>
+      <div class="f" style="margin:0"><label>PK fin (optionnel)</label><input type="text" id="srch-pk2" placeholder="PK31+200" oninput="searchByPK()"></div>
+    </div>
+    <div class="f" style="margin-top:8px"><label>Axe</label>
+      <select id="srch-axe" onchange="searchByPK()">
+        <option value="tous">Tous les axes</option>
+      </select>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text3);line-height:1.5">💡 Tolérance ±50m — les réceptions approchantes sont aussi affichées.</div>
+  </div>
+  <div id="srch-results" style="display:none">
+    <div class="sec" id="srch-count">Résultats</div>
+    <div class="card" id="srch-summary" style="background:var(--blue-l);border-color:#B4CDE8;display:none;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:600;color:var(--blue-d);margin-bottom:8px">Résumé de la zone</div>
+      <div id="srch-summary-content"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Détail des réceptions</div>
+      <div id="srch-list"></div>
+    </div>
+  </div>
+  <div id="srch-empty" style="display:none">
+    <div class="card" style="text-align:center;padding:24px">
+      <div style="font-size:32px;margin-bottom:10px">🔍</div>
+      <div style="font-size:13px;color:var(--text2)">Aucune réception trouvée.</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">Essayez avec d'autres PK ou vérifiez que des réceptions sont confirmées dans cette zone.</div>
+    </div>
+  </div>
+</div>
 
 <nav class="nav">
   <button class="ni active" onclick="goPage('saisie',this)"><svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="2" width="14" height="18" rx="2"/><line x1="7.5" y1="8" x2="14.5" y2="8"/><line x1="7.5" y1="11.5" x2="14.5" y2="11.5" opacity=".5"/><line x1="7.5" y1="15" x2="11" y2="15" opacity=".3"/></svg>Saisie</button>
   <button class="ni" onclick="goPage('avance',this)"><svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="14" width="4.5" height="6" rx="1"/><rect x="8.75" y="10" width="4.5" height="10" rx="1"/><rect x="14.5" y="5" width="4.5" height="15" rx="1"/></svg>Avancement</button>
+  <button class="ni" onclick="goPage('recherche',this)"><svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><line x1="14.5" y1="14.5" x2="19" y2="19"/></svg>Recherche</button>
   <button class="ni" onclick="goPage('rapport',this)"><svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="16" height="16" rx="2"/><line x1="7" y1="8" x2="15" y2="8"/><line x1="7" y1="11.5" x2="15" y2="11.5" opacity=".5"/><line x1="7" y1="15" x2="11" y2="15" opacity=".3"/></svg>Rapports</button>
 </nav>
 
@@ -927,7 +973,7 @@ function selNat(btn,key,family){
 
 // ── AXES ──
 function populateAxeSelects(){
-  const ids=['t-axe','pat-axe','adm-pat-axe','obj-axe-sel','bib-axe-sel'];
+  const ids=['t-axe','pat-axe','adm-pat-axe','obj-axe-sel','bib-axe-sel','srch-axe'];
   ids.forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
     const prev=el.value;
@@ -2053,6 +2099,73 @@ function adminTab(tab,btn){
   if(tab==='pat'){renderPATHistory();updatePATCumuls();}
   if(tab==='bib')renderBibList();
 }
+// ── RECHERCHE PAR PK ──
+function searchByPK(){
+  const pk1Str=document.getElementById('srch-pk1').value.trim();
+  const pk2Str=document.getElementById('srch-pk2').value.trim();
+  const axeFilt=document.getElementById('srch-axe').value;
+  const resultsEl=document.getElementById('srch-results');
+  const emptyEl=document.getElementById('srch-empty');
+  const listEl=document.getElementById('srch-list');
+  const countEl=document.getElementById('srch-count');
+  const summaryEl=document.getElementById('srch-summary');
+  const summaryContent=document.getElementById('srch-summary-content');
+  if(!pk1Str){resultsEl.style.display='none';emptyEl.style.display='none';return;}
+  const p1=parsePK(pk1Str);
+  const p2=pk2Str?parsePK(pk2Str):null;
+  if(p1===null){return;}
+  const TOL=50;
+  const allRecs=RECEPTIONS.filter(r=>{
+    if(axeFilt!=='tous'&&r.axe!==axeFilt)return false;
+    const rp1=r.pk1m,rp2=r.pk2m;
+    if(p2!==null) return rp2>=(p1-TOL)&&rp1<=(p2+TOL);
+    return (rp1-TOL)<=p1&&p1<=(rp2+TOL);
+  });
+  const isExact=r=>{
+    if(p2!==null) return r.pk1m>=(p1-5)&&r.pk2m<=(p2+5);
+    return Math.abs(r.pk1m-p1)<=5||Math.abs(r.pk2m-p1)<=5;
+  };
+  const exact=allRecs.filter(isExact);
+  const partial=allRecs.filter(r=>!isExact(r));
+  const sorted=[...exact,...partial];
+  if(!sorted.length){
+    resultsEl.style.display='none';emptyEl.style.display='block';return;
+  }
+  emptyEl.style.display='none';resultsEl.style.display='block';
+  countEl.textContent=sorted.length+' réception(s) trouvée(s)';
+  const byNat={};
+  sorted.forEach(r=>{
+    if(!byNat[r.natKey])byNat[r.natKey]={label:r.natLabel,ml:0,qty:0};
+    byNat[r.natKey].ml+=r.ml;
+    if(r.qty)byNat[r.natKey].qty+=parseFloat(r.qty)||0;
+  });
+  summaryContent.innerHTML=Object.values(byNat).map(n=>`
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid #B4CDE8;font-size:12px">
+      <span style="color:var(--blue-d);font-weight:500">${n.label}</span>
+      <span style="font-family:var(--mono);color:var(--blue-d)">${n.ml.toLocaleString('fr-FR')} ml${n.qty>0?' · '+fmtN(n.qty)+' m³':''}</span>
+    </div>`).join('');
+  summaryEl.style.display='block';
+  listEl.innerHTML=sorted.map(r=>{
+    const nat=NATURES[r.natKey];
+    const color=nat?nat.color:'#606060';
+    const ex=isExact(r);
+    return `<div style="padding:12px;background:var(--bg3);border:1px solid var(--border);border-left:3px solid ${ex?'var(--green)':'var(--amber)'};border-radius:var(--rs);margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;gap:8px">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:${color}">${r.natLabel}</div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--text2);margin-top:2px">${r.pk1str} → ${r.pk2str} · ${r.ml} ml</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">${fmtDate(r.date)} · ${r.heure||''} · ${r.axe}</div>
+          ${r.qty?`<div style="font-size:12px;color:var(--green);font-weight:600;margin-top:4px;font-family:var(--mono)">${fmtN(r.qty)} ${nat?nat.unit:'m³'}</div>`:''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <span class="badge ${r.status==='confirmed'?'b-ok':'b-pend'}">${r.status==='confirmed'?'Confirmé':'En attente'}</span>
+          <div style="font-size:10px;padding:2px 8px;border-radius:99px;font-weight:500;margin-top:4px;display:inline-block;background:${ex?'var(--green-l)':'var(--amber-l)'};color:${ex?'var(--green)':'var(--amber)'}">${ex?'✓ Exact':'~ Approx.'}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function goPage(id,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById('p-'+id).classList.add('active');
   document.querySelectorAll('.ni').forEach(b=>b.classList.remove('active'));btn.classList.add('active');

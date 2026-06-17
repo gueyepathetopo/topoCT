@@ -951,7 +951,23 @@ function calcPK(){
     const check=pkInSection(axe,ps,pe);
     if(check.ok){
       box.className='pk-box ok';
-      okMsg.textContent=check.msg;okMsg.style.display='block';
+      // Vérifier doublon potentiel sur cette nature
+      if(selectedNatKey){
+        const doublons=RECEPTIONS.filter(r=>
+          r.axe===axe&&r.natKey===selectedNatKey&&r.pk1m<pe&&r.pk2m>ps
+        );
+        if(doublons.length>0){
+          const d=doublons[0];
+          const statut=d.status==='confirmed'?'✅ confirmée':'⏳ en attente';
+          okMsg.textContent=`⚠️ Déjà réceptionné (${d.pk1str}→${d.pk2str} · ${fmtDate(d.date)} · ${statut})`;
+          okMsg.style.cssText='display:block;background:var(--amber-l);border:1px solid #D4A870;border-radius:var(--rs);padding:8px 12px;font-size:11px;color:var(--amber);margin-bottom:10px;';
+        } else {
+          okMsg.textContent=check.msg;okMsg.style.cssText='display:block;background:var(--green-l);border:1px solid #9FD4B4;border-radius:var(--rs);padding:8px 12px;font-size:11px;color:var(--green-d);margin-bottom:10px;';
+        }
+      } else {
+        okMsg.textContent=check.msg;
+        okMsg.style.cssText='display:block;background:var(--green-l);border:1px solid #9FD4B4;border-radius:var(--rs);padding:8px 12px;font-size:11px;color:var(--green-d);margin-bottom:10px;';
+      }
     } else {
       box.className='pk-box err';
       errMsg.textContent=check.msg;errMsg.style.display='block';
@@ -969,6 +985,8 @@ function selNat(btn,key,family){
   document.querySelectorAll('.nat-btn').forEach(b=>b.classList.remove('sel-pave','sel-bic','sel-lithos'));
   btn.classList.add('sel-'+(family||'pave'));
   selectedNatKey=key;
+  // Recalculer pour afficher avertissement doublon si PK déjà remplis
+  calcPK();
 }
 
 // ── AXES ──
@@ -1086,6 +1104,34 @@ async function saveRec(){
   const check=pkInSection(axe,p1,p2);
   if(!check.ok){alert('⛔ '+check.msg);return;}
   const ml=p2-p1;
+
+  // ── VÉRIFICATION DOUBLON ──
+  // Chercher si une réception existe déjà sur la même nature et section (chevauchement)
+  const doublons=RECEPTIONS.filter(r=>{
+    if(r.axe!==axe) return false;
+    if(r.natKey!==selectedNatKey) return false;
+    // Chevauchement : les deux plages se chevauchent
+    return r.pk1m < p2 && r.pk2m > p1;
+  });
+
+  if(doublons.length>0){
+    const d=doublons[0];
+    const statut=d.status==='confirmed'?'✅ Confirmée':'⏳ En attente';
+    const msg=`⚠️ Cette section a déjà été réceptionnée :
+
+`+
+      `Nature : ${d.natLabel}
+`+
+      `PK : ${d.pk1str} → ${d.pk2str}
+`+
+      `Date : ${fmtDate(d.date)} · ${d.heure||''}
+`+
+      `Statut : ${statut}
+
+`+
+      `Voulez-vous quand même enregistrer cette réception ?`;
+    if(!confirm(msg)) return;
+  }
   const rec={
     axe,natKey:selectedNatKey,
     natLabel:selectedNatKey.startsWith('custom_')
